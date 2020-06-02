@@ -50,7 +50,7 @@ P200.statistics.plot('smf')
 Other emerge data can also be added into the struct. Currently galaxy merger trees have the best support as that is what I work with most.
 
 ```python
-P200.galaxy_merger_trees()
+P200.galaxy_trees()
 ```
 
 Similar to the statistics file this will attach a new class to the universe object. This imports **all** available galaxy merger trees corresponding to this parameter file and drops them into a single monolithic pandas dataframe. For small simulations this is fine, though you might run into memory issues for larger simulation volumes. The basic tree dataframe can be accessed by calling:

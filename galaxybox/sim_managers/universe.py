@@ -48,23 +48,25 @@ class Universe:
 
         # this param scheme needs to be updated later. with class implemented, no reason to unpack as attrs in universe.
         self.params = em.params(self.param_path)
-        self.out_dir = os.path.abspath(self.param_path.split('parameterfiles')[0] + 'output/' + self.ModelName + '/')
         self.emerge_dir = os.path.abspath(self.param_path.split('parameterfiles')[0])
+        self.out_dir = os.path.join(self.emerge_dir, 'output', self.ModelName)
 
         if self.sim_type == 'EMERGE':
-            if self.TreefileName.startswith('../'):
-                tree_files = self.TreefileName
-                dirs = os.path.dirname(self.param_path).split('/')
-                del dirs[-1]
-                while tree_files.startswith('../'):
-                    del dirs[-1]
-                    tree_files = tree_files.strip('..')
-                    tree_files = tree_files.strip('/')
-                dirs = '/'.join(dirs)
-                self.TreefileName = '/'.join([dirs, tree_files])
+            tree_dir, tree_base = os.path.split(self.TreefileName)
+            
+            # check if this is a directory already
+            if os.path.isdir(tree_dir):
+                pass
             else:
-                self.TreefileName = '/'.join([self.emerge_dir, self.TreefileName])
-
+                cwd = os.getcwd()
+                # temprorarily set the working directory to the emerge directory
+                os.chdir(emerge_dir)
+                if os.path.isabs(self.TreefileName):
+                    # assume it should have been relative since it failed the `isdir` check
+                    self.TreefileName = '.' + self.TreefileName
+                self.TreefileName = os.path.abspath(self.TreefileName)
+                os.chdir(cwd)
+            
             self.num_procs = self.NumFilesInParallel
 
             if os.path.isfile(os.path.abspath(self.out_dir + '/compile_options.txt')):

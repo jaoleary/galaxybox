@@ -345,7 +345,7 @@ class halo_mergers:
             pass
 
         f = h5py.File(file_out, 'w')
-        data = self.list.to_records(index=False)
+        data = self.__list.to_records(index=False)
         f.create_dataset('Data', data=data, compression='gzip', compression_opts=9)
         f.close()
 
@@ -468,12 +468,12 @@ class halo_mergers:
 
         try:
             if inverse and log:
-                return np.histogram(np.log10(1 / self.list.loc[mask][axis].values), bins)
+                return np.histogram(np.log10(1 / self.__list.loc[mask][axis].values), bins)
             elif inverse:
-                return np.histogram(1 / self.list.loc[mask][axis].values, bins)
+                return np.histogram(1 / self.__list.loc[mask][axis].values, bins)
             elif log:
-                return np.histogram(np.log10(self.list.loc[mask][axis].values), bins)
+                return np.histogram(np.log10(self.__list.loc[mask][axis].values), bins)
             else:
-                return np.histogram(self.list.loc[mask][axis].values, bins)
+                return np.histogram(self.__list.loc[mask][axis].values, bins)
         except:
             raise Exception('Unrecognized axis type')

@@ -69,10 +69,12 @@ class Universe:
 
             self.num_procs = self.NumFilesInParallel
 
-            if os.path.isfile(os.path.abspath(self.out_dir + '/compile_options.txt')):
-                self.config = em.config.from_compiled(os.path.abspath(self.emerge_dir + '/Template-Config.sh'), os.path.abspath(self.out_dir + '/compile_options.txt'))
-            else:
-                self.config = em.config(os.path.abspath(self.emerge_dir + '/Template-Config.sh'))
+            template_config_path = os.path.abspath(self.emerge_dir + '/Template-Config.sh')
+            if os.path.isfile(template_config_path):
+                if os.path.isfile(os.path.abspath(self.out_dir + '/compile_options.txt')):
+                    self.config = em.config.from_compiled(template_config_path, os.path.abspath(self.out_dir + '/compile_options.txt'))
+                else:
+                    self.config = em.config(template_config_path)
 
         else:
             raise NotImplementedError('Currently only Emerge data is supported')

@@ -53,20 +53,20 @@ class Universe:
 
         if self.sim_type == 'EMERGE':
             tree_dir, tree_base = os.path.split(self.TreefileName)
-            
+
             # check if this is a directory already
             if os.path.isdir(tree_dir):
                 pass
             else:
                 cwd = os.getcwd()
                 # temprorarily set the working directory to the emerge directory
-                os.chdir(emerge_dir)
+                os.chdir(self.emerge_dir)
                 if os.path.isabs(self.TreefileName):
                     # assume it should have been relative since it failed the `isdir` check
                     self.TreefileName = '.' + self.TreefileName
                 self.TreefileName = os.path.abspath(self.TreefileName)
                 os.chdir(cwd)
-            
+
             self.num_procs = self.NumFilesInParallel
 
             if os.path.isfile(os.path.abspath(self.out_dir + '/compile_options.txt')):

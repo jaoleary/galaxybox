@@ -306,3 +306,150 @@ def arg_parser(func, drop=False, **kwargs):
             if drop:
                 kwargs.pop(k)
     return func_kwargs, kwargs
+
+
+def shuffle_string(s):
+    """Randomly shuffle a string
+
+    Parameters
+    ----------
+    s : str
+        String to be shuffled
+
+    Returns
+    -------
+    str
+        The shuffled string
+    """
+    s = list(s)
+    np.random.shuffle(s)
+    return ''.join(s)
+
+
+def translate(pos, Lbox, dx=0, axes=0):
+    """Translate coordinates.
+
+    Parameters
+    ----------
+    pos : 2-D array
+        An array of size (N, 3) containing the 3D cartesian positions for N
+        points in space.
+    Lbox : float
+        Comoving cosmological box side length.
+    dx : float, array_like
+        The magnitude of translation along each axis
+    axes : int, array_like
+        Which axes the translation should be applied to
+
+    Returns
+    -------
+    pos : 2-D array
+        The new positions after translation
+
+    """
+    pos = np.atleast_2d(pos)
+    dx = np.atleast_1d(dx)
+    axes = np.atleast_1d(axes)
+    for i, a in enumerate(axes):
+        pos[:, a] += dx[i]
+        above = np.where(pos[:, a] >= Lbox)
+        pos[above, a] -= Lbox
+    return pos
+
+def poly_traverse(coords, CCW=True):
+    """Return a (counter) clockwise coordinate list.
+
+    This function takes a list of coordinates corresponding to the 2D vertex
+    coordinates of a convex polygon and reorders them such that the verticies
+    are traversed in a (counter) clockwise order.
+
+    Parameters
+    ----------
+    coords : 2-D array
+        An array of size (N, 2) where N corresponds to the number of vertices on
+        a polygon.
+    CCW : boolean
+        If true the coordinates will be returned in counter-clockwise order.
+        Otherwise coordinates will be returned in clockwise order (the default is True).
+
+    Returns
+    -------
+    ordered_coords : 2-D array
+        Reordered coordinate list of size (N,2)
+
+    """
+    # First locate the geometric center of the polygon.
+    center = np.array([np.mean(coords[:, 0]), np.mean(coords[:, 1])])
+    # Next, find the angle with respect to the geometric center and each vertex.
+    # Coordinates are then sorted in order of ascending or descending angle
+    # depending on whethere clockwise or counter-clockwise orientation is desired.
+    order = np.argsort(np.arctan2(coords[:, 1] - center[1], coords[:, 0] - center[0]))
+    if CCW:
+        return coords[order]
+    else:
+        return coords[order[::-1]]
+
+
+def coordinate_plane(origin=np.array([0, 0, 0]), Lbox=1, axes=[0, 1]):
+    """Create a square coordinate plane along desired axes starting at some origin.
+
+    Parameters
+    ----------
+    origin : array_like
+        The desired origin for the plane in 3D space (the default is np.array([0, 0, 0])).
+    Lbox : type
+        The side length of the plane (the default is 1).
+    axes : array_like
+        The principle axes used to create the plane (the default is [0, 1]).
+
+    Returns
+    -------
+    points : array_like
+        The vertex locations of the plane in 3D space.
+
+    """
+    points = np.zeros((4, 3))
+    y = np.arange(3)
+    axes = np.atleast_1d(axes)
+
+    norm = np.setdiff1d(y, axes)[0]
+    points[:, norm] = origin[norm]
+    points[0, :] = origin
+
+    i = 0
+    for aj in range(2):
+        for ai in range(2):
+            points[i, [axes[0], axes[1]]] = origin[axes[0]] + ai * Lbox, origin[axes[1]] + aj * Lbox
+            i += 1
+
+    return points
+
+
+def rotate(vec, angle=0, u=[1, 0, 0]):
+    """Rotate a vector wrt an arbitrary unit vector.
+
+    Rotates an input vector about some arbitrary unit vector `u` using the
+    Rodrigues rotation formula.
+
+    Parameters
+    ----------
+    vec : 1-D array
+        3D cartesian vector coordinates.
+    angle : float
+        the angle to be rotated in radians (the default is 0).
+    u : type
+        unit vector to rotate around (the default is [1, 0 ,0]).
+
+    Returns
+    -------
+    rotated_vec : 1-D array
+        The 3D cartesian coordinates of the rotated vector
+
+    """
+    I = np.identity(3)
+    W = np.array([[0, -u[2], u[1]],
+                  [u[2], 0, -u[0]],
+                  [-u[1], u[0], 0]])
+
+    R = I + np.sin(angle) * W + 2 * (np.sin(angle / 2)**2) * np.matmul(W, W)
+    return np.matmul(vec, R)

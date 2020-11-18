@@ -6,6 +6,7 @@ from astropy import cosmology as apcos
 from . import emerge as em
 from ..helper_functions.functions import *
 from ..io import emerge_io as em_io
+from matplotlib.pyplot import savefig
 
 __author__ = ('Joseph O\'Leary', )
 
@@ -469,4 +470,6 @@ class Universe:
         if reload:
             self.reload()
 
+    def savefig(self, fname, **kwargs):
+        savefig(os.path.join(self.fig_dir, fname), **kwargs)
 

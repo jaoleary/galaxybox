@@ -12,7 +12,6 @@ setup(name='galaxybox',
       install_requires=[
             'astropy',
             'h5py',
-            'halotools',
             'numpy',
             'pandas',
             'scipy',

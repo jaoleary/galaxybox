@@ -14,6 +14,6 @@ setup(name='galaxybox',
             'h5py',
             'numpy',
             'pandas',
-            'scipy',
+            'scipy>=1.4.0',
             'tqdm'],
       zip_safe=False)

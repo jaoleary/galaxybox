@@ -6,15 +6,21 @@ A collection of mostly personal tools and scripts that I use for my work.
 
 Clone this repository by executing
 
-    git clone https://github.com/jaoleary/galaxybox.git
+```bash
+git clone https://github.com/jaoleary/galaxybox.git
+```
 
 move into the repsitory directy with:
 
-    cd galaxybox
+```bash
+cd galaxybox
+```
 
 Then install by executing:
 
-    python setup.py install
+```bash
+python setup.py install
+```
 
 ## Basic usage
 
@@ -60,13 +66,17 @@ P200.galaxy.trees
 ```
 
 If however you want to know the growth history of an individual galaxy and you know the ID of that galaxy you can access a single tree with:
+
 ```python
 P200.galaxy.tree(igal=`some_ID_number`)
 ```
+
 Without any additional information this method just executes a straight recursive tree walk to get the growth of `igal`. This can be quite slow, if you ran emerge with reindexing enabled, then you could also first sort the trees for faster retreival. This is accomplished easily with:
+
 ```python
 P200.galaxy.sort_index()
 ```
+
 The tree can then be accessed in the same way as before.
 
 If you want to access galaxy lists for a single redshift(snapshot) this can be done using the `list()` method. However, this method sacrifices clarify for convenience so it doesnt accept an explicit list of arguments. The basic appraoch to is to accept a min/max argument for any of the columns appearing in the `P200.galaxy.trees` dataframe. For instance a galaxy catalog at z=1 for a specific mass range could be obtained from:
@@ -76,9 +86,11 @@ P200.galaxy.list(redshift=1, min_Stellar_mass=10, max_Stellar_mass=11)
 ```
 
 The columns of the galaxy trees files are meant to be descriptive, not convenient. So for my own sanity aliasing is available for most columns. This same galaxy catalog could be acquired with:
+
 ```python
 P200.galaxy.list(z=1, min_mstar=10, max_mstar=11)
 ```
+
 You can check if an alias is valid using the `alias()` method.
 
 The `list()` method also lets you select galaxies based on derived properties such as color. You could for instance select all passive galaxies in the trees by running:
@@ -87,9 +99,12 @@ The `list()` method also lets you select galaxies based on derived properties su
 P200.galaxy.list(redshift='all', color='red')
 ```
 
-This is just a snipped of what you can do with with these tools. Most of the code should be commented, but if there is a question regarding how something works, or if youd like to see something implemented just contact me. Further examples of how I use these tools can be found in the jupyter-notebooks for my papers.
+This is just a snippet of what you can do with with these tools. Most of the code should be commented, but if there is a question regarding how something works, or if youd like to see something implemented just contact me. Further examples of how I use these tools can be found in the jupyter-notebooks for my papers.
 
-## Notebooks 
+## Notebooks
 
 Paper: [EMERGE: Empirical predictions of galaxy merger rates since z~6](https://ui.adsabs.harvard.edu/abs/2020arXiv200102687O/abstract)\
 Notebook: [2001.02687](https://github.com/jaoleary/2001.02687)
+
+Paper: [EMERGE: Constraining merging probabilities and timescales of close galaxy pairs](https://ui.adsabs.harvard.edu/abs/2020arXiv201105341O/abstract)\
+Notebook: [2011.05341](https://github.com/jaoleary/2011.05341)

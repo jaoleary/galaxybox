@@ -21,7 +21,7 @@ from scipy.spatial import ckdtree
 
 __author__ = ('Joseph O\'Leary', )
 
-# TODO: This was all thrown together hastily, needs some cleanup and documentation.
+# TODO: This was all thrown together hastily, needs some cleanup and better documentation.
 
 class survey:
     """A wrapper for working on lightcone groups."""
@@ -164,7 +164,18 @@ class observation:
         return pstr
 
     def alias(self, key):
-        """Return proper coloumn key for input alias key."""
+        """Return proper coloumn key for input alias key.
+
+        Parameters
+        ----------
+        key : str
+            A string alias for a galaxy tree column
+
+        Returns
+        -------
+        str
+            The proper column name for the input alias
+        """
         # lets see if theres already an alias in the tree.
         try:
             return self.__tree_alias(key)
@@ -190,6 +201,24 @@ class observation:
             raise KeyError('`{}` has no known alias.'.format(key))
             
     def list(self, merge=True, **kwargs):
+        """Return list of galaxy with specified properties.
+
+        This function selects galaxies based on a flexible set of arguments. Any column of the galaxy.trees attribute can
+        have a `min` are `max` added as a prefix or suffix to the column name or alias of the column name and passed as
+        and argument to this function. This can also be used to selected galaxies based on derived properties such as color.
+
+        Parameters
+        ----------
+        merge : bool, optional
+            If True the lightcone dataframe will be merged to the tree dataframe so that tree columns can also be selected, by default True
+
+        Returns
+        -------
+        pandas.DataFrame
+            A masked subset of the galaxy.trees attribute
+
+        # TODO: expand this docstring and add examples.
+        """
         # BUG: This listing method will break if not linked to trees. 
         # First clean up kwargs, replace aliases
         keys = list(kwargs.keys())
@@ -251,6 +280,15 @@ class observation:
             return self.__data
     
     def save(self, file_path, key=None):
+        """Save this observation to an hdf5 file.
+
+        Parameters
+        ----------
+        file_path : str
+            Path to output file
+        key : str, optional
+            The name of the dataset in the file. If None the observation name will be used, by default None
+        """        
         if key is None:
             key = self.name
         file = h5py.File(file_path, 'a')
@@ -404,6 +442,15 @@ class observation:
         return pairs
     
     def plot_cone(self, frame='cone', comoving=True, **kwargs):
+        """Plot a visual representation of the galaxies contained in the light cone.
+
+        Parameters
+        ----------
+        frame : str, optional
+            If `box` the plot will be generated in the reference from of the cosmological box. If `cone` the plot will be in the refrence frame of the lightcone geometry, by default 'cone'
+        comoving : bool, optional
+            If False physical coordinates will be used, by default True
+        """        
         LC_cat = self.list(**kwargs)
         pos = LC_cat[['X_cone','Y_cone','Z_cone']].values
         unitstr = ' [cMpc]'

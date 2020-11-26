@@ -20,11 +20,11 @@ class lightcone():
         dd : Astropy Angle
             Declination of lightcone.
         u1 : 1-D array
-            a vector with shape (1,3) alinged with the right ascension.
+            a vector with shape (1,3) aligned with the right ascension.
         u2 : 1-D array
-            a vector with shape (1,3) alinged with the declination.
+            a vector with shape (1,3) aligned with the declination.
         u3: 1-D array
-            A vector with shape(1,3) alinged with line of sight
+            A vector with shape(1,3) aligned with line of sight
         Lbox : float
             Comoving cosmological box side length.
         full_width : Bool
@@ -84,19 +84,19 @@ class lightcone():
 
     @classmethod
     def full_width(cls, Lbox, los_axis=2):
-        """[summary]
+        """Creates a 'lightcone' with rectangle geometry where the projected side lengths are equal to Lbox
 
         Parameters
         ----------
         Lbox : float
             Comoving cosmological box side length.
         los_axis : int, optional
-            [description], by default 2
+            The axis to be used as the line of sight, by default 2
 
         Returns
         -------
-        [type]
-            [description]
+        lightcone
+            A lightcone object.
         """
         u3 = np.zeros(3)
         u3[los_axis] = 1

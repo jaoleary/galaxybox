@@ -4,3 +4,4 @@ from .statistics import statistics
 from .galaxy_trees import galaxy_trees
 from .halo_trees import halo_trees
 from .mergers import galaxy_mergers, halo_mergers
+from .lightcone_catalog import survey, observation

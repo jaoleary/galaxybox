@@ -12,7 +12,7 @@ from tqdm.auto import tqdm
 fbase_in = sys.argv[1]
 fbase_out = sys.argv[2]
 
-cout = ['descid', 'upid', 'np', 'mmp', 'scale', 'mvir', 'rvir', 'c', 'lambda', 'X', 'Y', 'Z', 'Vx', 'Vy', 'Vz']
+cout = ['descid', 'upid', 'np', 'mmp', 'scale', 'mvir', 'rvir', 'concentration', 'lambda', 'X_pos', 'Y_pos', 'Z_pos', 'X_vel', 'Y_vel', 'Z_vel']
 
 trees_path = [name for name in glob.glob(fbase_in + '*')]
 for i, f in enumerate(trees_path):
@@ -22,11 +22,12 @@ for i, f in enumerate(trees_path):
 print('Found {:d} halo merger trees.'.format(len(trees_path)))
 frames = [None] * len(trees_path)
 for i, file in enumerate(tqdm(trees_path, desc='Loading halo trees')):
-        _, _, _, frames[i] = gb.read_halo_trees(file)
+        _, _, _, frames[i] = gb.io.emerge_io.read_halo_trees(file)
 
 iso_trees = pd.concat(frames)
 iso_trees.set_index('haloid', inplace=True)
-forests = gb.read_halo_forests(fbase_in + '.forests')
+forests = gb.io.emerge_io.read_halo_forests(fbase_in + '.forests')
+#print(iso_trees.keys())
 
 print('Setting `upid`.')
 # first cleanup the upid
@@ -125,10 +126,11 @@ for fn in tqdm(np.arange(len(trees_path)), desc='Writing iso trees'):
     file_path = fbase_out + '.{:d}'.format(fn)
     hout = iso_trees.loc[fn_mask]
     roots = hout['rootid'].value_counts().loc[hout.loc[hout.scale==1]['rootid'].index.values]
+    #print(hout.keys())
     Ntrees = len(roots)
     Nhalos = roots.values
     TreeID = roots.index.values - 1
-    gb.write_halo_trees(file_path=file_path, tree=hout[cout], Ntrees=Ntrees, Nhalos=Nhalos, TreeID=TreeID, file_format='EMERGE')
+    gb.io.emerge_io.write_halo_trees(file_path=file_path, tree=hout[cout], Ntrees=Ntrees, Nhalos=Nhalos, TreeID=TreeID, file_format='EMERGE')
 
 print('Writing new `.forests` file.')
 iso_forest = iso_trees.loc[iso_trees.rootid.unique()][['rootid']].reset_index().to_numpy()

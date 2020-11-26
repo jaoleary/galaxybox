@@ -217,6 +217,7 @@ class Universe:
         col_alias['statistics'] = ['statistics', 'stats']
         col_alias['galaxy_catalog'] = ['galaxy_catalog', 'galcat']
         col_alias['galaxy_trees'] = ['galaxy_trees', 'gtree', 'gtrees', 'galtree', 'trees']
+        col_alias['survey'] = ['survey']
         col_alias['halo_trees'] = ['halo_trees', 'htree', 'htrees']
         col_alias['galaxy_mergers'] = ['galaxy_mergers', 'gmergers', 'mergers']
         col_alias['halo_mergers'] = ['halo_mergers', 'hmergers']
@@ -240,6 +241,12 @@ class Universe:
 
         if 'galaxy_trees' in self.__include:
             self.add_galaxy_trees()
+
+        if 'survey' in self.__include:
+            self.add_survey()
+
+        if ('galaxy_catalog' in self.__include) and ('galaxy_trees' not in self.__include):
+            self.add_galaxy_catalog()
 
         if 'halo_trees' in self.__include:
             self.add_halo_trees()
@@ -386,6 +393,23 @@ class Universe:
         else:
             print('The halo merger class is not available for simulation type ' + self.sim_type + '.')
 
+    def add_survey(self):
+        """Add a galaxy survey to the universe."""
+        add = {'out_dir': self.out_dir,
+            'fig_dir': self.fig_dir,
+            'ModelName': self.ModelName,
+            'BoxSize': self.BoxSize,
+            'UnitTime_in_yr': self.UnitTime_in_yr,
+            'cosmology': self.cosmology}
+
+        survey = em.survey(file_path = os.path.join(self.out_dir,'survey.h5'), add_attrs=add)
+        if hasattr(self, 'galaxy'):
+            self.galaxy.survey = survey
+            if 'galaxy_trees' in self.__include:
+                # if trees are available. link them.
+                self.galaxy.survey.link_trees(self.galaxy)
+        else:
+            self.galaxy_survey = survey
 
     def flush(self):
         """Delete all data structures in Universe except for config, and params."""
@@ -471,5 +495,15 @@ class Universe:
             self.reload()
 
     def savefig(self, fname, **kwargs):
+        """Save figure in directory set to Universe class.
+
+        This function is a wrapper to `matplotlib.pyplot.savefig()` refer to their
+        documentation for further details on usage.
+
+        Parameters
+        ----------
+        fname : str
+            The output figure name
+        """   
         savefig(os.path.join(self.fig_dir, fname), **kwargs)
 

@@ -1,6 +1,11 @@
 """Classes for handling Emerge galaxy merger tree data."""
-from astropy import cosmology as apcos
 from ...io.emerge_io import read_tree
+from ...helper_functions import arg_parser
+from ...mock_observables import lightcone
+
+from astropy import cosmology as apcos
+from astropy import constants as apconst
+
 from tqdm.auto import tqdm
 from scipy.interpolate import interp1d
 import numpy as np
@@ -117,7 +122,7 @@ class galaxy_trees:
             A galaxy tree object
         """
         # TODO: this whole method needs some cleanup
-        # TODO: set this to work with ascii trees aswell 
+        # TODO: set this to work with ascii trees aswell
         tree_dir = os.path.abspath(tree_dir)
         f = os.path.join(tree_dir,'tree.0.h5') #! Having this hardcoded is a terrible idea...I'll deal with it later.
         keys = h5py.File(f, 'r').attrs.keys()
@@ -695,3 +700,98 @@ class galaxy_trees:
         else:
             print('...Im not going to sort because you dont have leaves, so you probably dont have the correct ID format....so there is nothing to gain from a sort')
 
+    def make_lightcone_catalog(self, min_z=None, max_z=None, randomize=False, seed=None, fuzzy_bounds=False, method='KW07', lean=True, **kwargs):
+
+            if method == 'KW07':
+                LC_kwargs, kwargs = arg_parser(lightcone.KW07, drop=True, **kwargs)
+                LC = lightcone.KW07(**LC_kwargs, Lbox=self.BoxSize / self.cosmology.h)
+            elif method == 'full_width':
+                LC_kwargs, kwargs = arg_parser(lightcone.full_width, drop=True, **kwargs)
+                LC = lightcone.full_width(Lbox=self.BoxSize / self.cosmology.h, **LC_kwargs)
+            else:
+                raise NotImplementedError('Only the \'KW07\' and \'full_width\'cone method has been implemented at this time')
+            
+            if seed is not None:
+                LC.set_seed(seed)
+
+            D = self.cosmology.comoving_distance(1 / self.scales - 1).value[::-1]
+            LC.set_snap_distances(D)
+            if max_z is None:
+                max_z = 1 / self.scales.min() - 1
+            if min_z is None:
+                min_z = self.TreeRootRedshift
+
+            z = np.linspace(min_z,max_z,1000000)
+            d = self.cosmology.comoving_distance(z).value
+            redshift_at_D = interp1d(d,z)
+
+            D_min = self.cosmology.comoving_distance(min_z).value
+            D_max = self.cosmology.comoving_distance(max_z).value
+            vert = LC.tesselate(D_min, D_max)
+            snapshots = self.snapshots[::-1]
+            redshifts = 1 / self.scales[::-1] - 1
+
+            # loop over all tesselations that intersect lightcone
+            for i, og in enumerate(tqdm(vert)):
+                snap_arg = LC.get_snapshots(og)
+                bc = LC.get_boxcoord(og)
+
+                # loop over all snapshots available to this volume
+                for j, sa in enumerate(snap_arg):
+                    smin, smax = LC.snapshot_extent(sa)
+                    if lean:
+                        # if lean is true, only save the minmumn information necessary
+                        # TODO: this could be cut down even futher but I'll deal with that later.
+                        galaxies = self.list(snapshot=snapshots[sa], **kwargs)[['Scale', 'Up_ID', 'Halo_radius', 'X_pos', 'Y_pos', 'Z_pos', 'X_vel', 'Y_vel', 'Z_vel', 'Type']].copy()
+                    else:
+                        galaxies = self.list(snapshot=snapshots[sa], **kwargs).copy()
+                    
+                    # if not galaxies then theres nothing to do
+                    if len(galaxies) == 0:
+                        continue
+
+                    galaxies[['X_pos', 'Y_pos', 'Z_pos']] = LC.transform_position(pos=galaxies[['X_pos', 'Y_pos', 'Z_pos']], randomize=randomize, box_coord=bc)
+                    if randomize:
+                        galaxies[['X_vel', 'Y_vel', 'Z_vel']] = LC.transform_velocity(vel=galaxies[['X_vel', 'Y_vel', 'Z_vel']], box_coord=bc)
+                    
+                    mask = LC.contained(galaxies[['X_pos', 'Y_pos', 'Z_pos']], mask_only=True)
+                    galaxies = galaxies.loc[mask]
+                    galaxies[['Redshift', 'Redshift_obs', 'X_cone', 'Y_cone', 'Z_cone', 'X_cvel', 'Y_cvel', 'Z_cvel', 'RA', 'Dec']] = pd.DataFrame(columns=['Redshift', 'Redshift_obs', 'X_cone', 'Y_cone', 'Z_cone', 'X_cvel', 'Y_cvel', 'Z_cvel', 'RA', 'Dec'])
+                    galaxies[['X_cone', 'Y_cone', 'Z_cone']] = LC.cone_cartesian(galaxies[['X_pos', 'Y_pos', 'Z_pos']])
+                    glist = galaxies.copy()  # everything at this snapshot
+                    # cut out the right radial extent
+                    mask = (galaxies['Z_cone'] >= np.max([smin, D_min])) & (galaxies['Z_cone'] < np.min([smax, D_max]))
+                    galaxies = galaxies.loc[mask]
+
+                    # added satellites that break the border
+                    # TODO: Update to grab all main galaxies first and populate satellites after.
+                    if fuzzy_bounds & (len(galaxies) > 0):
+                        mains = galaxies.loc[galaxies['Type'] == 0]
+                        # check if there are any main galaxies
+                        if len(mains) > 0:
+                            mains = mains.loc[(mains['Z_cone'].values + mains['Halo_radius'].values) > smax]
+                            # do any of these extend over the boundary
+                            if len(mains) > 0:
+                                sats = glist.loc[glist['Up_ID'].isin(mains.index.values)]
+                                mask = (sats['Z_cone'] >= smax) & (sats['Z_cone'] < D_max)
+                                # Add those satellites to the galaxy list.
+                                galaxies = pd.concat([galaxies, sats.loc[mask]])
+
+                    # Add columnes for lightcone coordinates and apparent redshift
+                    galaxies[['RA', 'Dec']] = LC.ang_coords(galaxies[['X_pos', 'Y_pos', 'Z_pos']])
+                    galaxies[['X_cvel', 'Y_cvel', 'Z_cvel']] = LC.cone_cartesian(galaxies[['X_vel', 'Y_vel', 'Z_vel']])
+                    galaxies['Redshift'] = galaxies['Z_cone'].apply(redshift_at_D).values
+                    galaxies['Redshift_obs'] = galaxies['Redshift'] + galaxies['Z_cvel'] * (1 + galaxies['Redshift']) / apconst.c.to('km/s').value
+
+                    if (i == 0) & (j == 0):
+                        Lightcone_cat = galaxies
+                    else:
+                        Lightcone_cat = pd.concat([Lightcone_cat, galaxies])
+
+            Lightcone_cat.index.rename('ID', inplace=True) # this is a safety step incase the first loop turned out no galaxies
+            Lightcone_cat.reset_index(inplace=True)
+            Lightcone_cat.rename(columns={'ID': 'Tree_ID'}, inplace=True)
+            if lean:
+                return Lightcone_cat[['Tree_ID', 'Redshift', 'Redshift_obs', 'X_cone', 'Y_cone', 'Z_cone', 'X_cvel', 'Y_cvel', 'Z_cvel', 'RA', 'Dec']], LC, (min_z, max_z)
+            else:
+                return Lightcone_cat, LC, (min_z, max_z)

@@ -106,6 +106,52 @@ class lightcone():
         dd = Angle(np.pi, apunits.radian)
         return cls(da, dd, u1, u2, u3, Lbox, full_width=True)
 
+    @classmethod
+    def hybrid(cls, RA, Dec, Lbox):
+        """Create a lightcone using the method of Kitzblicher and White 2007. By specifying Right ascension and declination directly
+
+        Parameters
+        ----------
+        RA : int, float, string
+            Right ascension of lightcone in radians.
+        Dec : int, float, stri
+            Declination of lightcone in radians.
+        Lbox : float
+            Comoving cosmological box side length.
+
+        Returns
+        -------
+        lightcone
+            A lightcone object.
+        """
+        if isinstance(RA, (float, int, str)):
+            RA = Angle(RA, apunits.radian)
+        if isinstance(Dec, (float, int, str)):
+            Dec = Angle(Dec, apunits.radian)
+
+        n = (RA.value / (Dec.value**2))**(1 / 3)
+        m = n * Dec.value / RA.value
+        if (m<1) or (n<1):
+            raise ValueError("Selected angles are too wide, choose small aperture")
+        # create lightcone coordinate vectors
+        u3 = np.array([n, m, m * n]) / np.sqrt(m**2 + n**2 + (m * n)**2)
+
+        if m <= n:
+            uax = np.array([1, 0, 0])
+        else:
+            uax = np.array([0, 1, 0])
+        u1 = np.cross(u3, uax)
+        u1 /= np.linalg.norm(u1, axis=-1)
+        u2 = np.cross(u3, u1)
+
+        # create line of sight vector
+        LoS = np.array([Lbox / m, Lbox / n, Lbox]) / np.linalg.norm(np.array([Lbox / m, Lbox / n, Lbox]), axis=-1)
+
+        # light cone angles
+        da = Angle(1 / (m * m * n), apunits.radian)
+        dd = Angle(1 / (m * n * n), apunits.radian)
+        return cls(da, dd, u1, u2, u3, Lbox)
+
     def vector(self, D=1):
         """Return a vector of length D along the light cone line of sight."""
         return D * self.u3

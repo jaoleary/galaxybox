@@ -708,8 +708,11 @@ class galaxy_trees:
             elif method == 'full_width':
                 LC_kwargs, kwargs = arg_parser(lightcone.full_width, drop=True, **kwargs)
                 LC = lightcone.full_width(Lbox=self.BoxSize / self.cosmology.h, **LC_kwargs)
+            elif method == 'hybrid':
+                LC_kwargs, kwargs = arg_parser(lightcone.hybrid, drop=True, **kwargs)
+                LC = lightcone.hybrid(Lbox=self.BoxSize / self.cosmology.h, **LC_kwargs)
             else:
-                raise NotImplementedError('Only the \'KW07\' and \'full_width\'cone method has been implemented at this time')
+                raise NotImplementedError('Only the \'KW07\', \'full_width\' and \'hybrid\' cone methods have been implemented at this time')
             
             if seed is not None:
                 LC.set_seed(seed)

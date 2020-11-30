@@ -68,6 +68,7 @@ class Universe:
                 self.TreefileName = os.path.abspath(self.TreefileName)
                 os.chdir(cwd)
 
+            self.TreefileName = os.path.abspath(self.TreefileName)
             self.num_procs = self.NumFilesInParallel
 
             template_config_path = os.path.abspath(self.emerge_dir + '/Template-Config.sh')

@@ -2,9 +2,12 @@
 Some general use plotting functions
 """
 import matplotlib.pyplot as plt
+from matplotlib.patches import FancyArrowPatch
+from mpl_toolkits.mplot3d import proj3d
+import numpy as np
+from itertools import product, combinations
 
 __author__ = ('Joseph O\'Leary', )
-
 
 def linestyle(sequence=None, dash=None, dot=None, space=None, buffer=False, offset=0):
     """Generate more linetypes from arbitrary `-`,`.` combinations with added
@@ -66,3 +69,28 @@ def linestyle(sequence=None, dash=None, dot=None, space=None, buffer=False, offs
 def ls(sequence, **kwargs):
     """Shortcut to the linestyle function."""
     return linestyle(sequence, **kwargs)
+
+
+def render_cube(ax,O,L):
+    # Adapted from
+    # https://stackoverflow.com/questions/11140163/plotting-a-3d-cube-a-sphere-and-a-vector-in-matplotlib
+    r = [0, L]
+    og = np.atleast_1d(O)
+    for s, e in combinations(np.array(list(product(r, r, r))), 2):
+        if np.sum(np.abs(s-e)) == r[1]-r[0]:
+            ln = ax.plot3D(*zip(og+np.array(s), og+np.array(e)), color="b",alpha=0.25)
+    return ln
+
+
+class Arrow3D(FancyArrowPatch):
+    # Adapted from
+    # https://stackoverflow.com/questions/11140163/plotting-a-3d-cube-a-sphere-and-a-vector-in-matplotlib
+    def __init__(self, xs, ys, zs, *args, **kwargs):
+        FancyArrowPatch.__init__(self, (0, 0), (0, 0), *args, **kwargs)
+        self._verts3d = xs, ys, zs
+
+    def draw(self, renderer):
+        xs3d, ys3d, zs3d = self._verts3d
+        xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, renderer.M)
+        self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
+        FancyArrowPatch.draw(self, renderer)

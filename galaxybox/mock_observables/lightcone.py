@@ -4,7 +4,9 @@ from astropy.coordinates import Angle
 import astropy.units as apunits
 from shapely.geometry import Polygon
 from scipy.spatial.transform.rotation import Rotation
+import matplotlib.pyplot as plt
 from ..helper_functions import coordinate_plane, poly_traverse, rotate, shuffle_string, translate
+from ..plot.plot import Arrow3D, render_cube
 
 __author__ = ('Joseph O\'Leary', )
 
@@ -497,3 +499,81 @@ class lightcone():
         """
         box_coord = np.floor(pos/self.Lbox).astype(int)
         return box_coord
+
+    def plot_cone(self, D_min, D_max):
+        #TODO: provide doc string and clean up method
+        vert = self.tesselate(D_min, D_max)
+
+        fig = plt.figure(figsize=(12,12))
+        ax1 = fig.add_subplot(2,2,1)
+
+        ax2 = fig.add_subplot(2,2,2, projection='3d')
+        ax2.grid(False)
+        ax3 = fig.add_subplot(2,2,3)
+        ax4 = fig.add_subplot(2,2,4)
+
+        ax1.set_xlim([vert.min(),vert.max()+200])
+        ax1.set_ylim([vert.min(),vert.max()+200])
+        ax1.set_xlabel('X [cMpc]')
+        ax1.set_ylabel('Y [cMpc]')
+
+        ax3.set_xlim([vert.min(),vert.max()+200])
+        ax3.set_ylim([vert.min(),vert.max()+200])
+        ax3.set_xlabel('X [cMpc]')
+        ax3.set_ylabel('Z [cMpc]')
+
+        ax4.set_xlim([vert.min(),vert.max()+200])
+        ax4.set_ylim([vert.min(),vert.max()+200])
+        ax4.set_xlabel('Y [cMpc]')
+        ax4.set_ylabel('Z [cMpc]')
+
+        for i, og in enumerate(vert):
+            render_cube(ax2,O=og,L=200)
+
+            axis = [0,1]
+            rec = coordinate_plane(og,Lbox=200, axes=axis)
+            rec[2:,:] = rec[2:,:][::-1]
+            rec = np.vstack((rec,rec[0,:]))
+            ax1.plot(rec[:,axis[0]],rec[:,axis[1]], 'b',alpha=0.25)
+            
+            axis = [0,2]
+            rec = coordinate_plane(og,Lbox=200, axes=axis)
+            rec[2:,:] = rec[2:,:][::-1]
+            rec = np.vstack((rec,rec[0,:]))
+            ax3.plot(rec[:,axis[0]],rec[:,axis[1]], 'b',alpha=0.25)
+            
+            axis = [1,2]
+            rec = coordinate_plane(og,Lbox=200, axes=axis)
+            rec[2:,:] = rec[2:,:][::-1]
+            rec = np.vstack((rec,rec[0,:]))
+            ax4.plot(rec[:,axis[0]],rec[:,axis[1]], 'b',alpha=0.25)
+
+            ax2.set_zlim3d(vert.min(),vert.max()+200)
+            ax2.set_ylim3d(vert.min(),vert.max()+200)
+            ax2.set_xlim3d(vert.min(),vert.max()+200)
+
+            ax2.set_xlabel('X [cMpc]')
+            ax2.set_ylabel('Y [cMpc]')
+            ax2.set_zlabel('Z [cMpc]')
+
+            a = Arrow3D([self.u3[0]*D_min, self.u3[0]*D_max], [self.u3[1]*D_min, self.u3[1]*D_max], [self.u3[2]*D_min, self.u3[2]*D_max], mutation_scale=20,
+                        lw=2, arrowstyle="-|>", color="r")
+            ax2.add_artist(a)
+
+            x = self.u3[0]*D_min
+            dx = np.diff([self.u3[0]*D_min, self.u3[0]*D_max])[0]
+            y = self.u3[1]*D_min
+            dy = np.diff([self.u3[1]*D_min, self.u3[1]*D_max])[0]
+            ax1.arrow(x,y,dx,dy,lw=2,color="r")
+
+            x = self.u3[0]*D_min
+            dx = np.diff([self.u3[0]*D_min, self.u3[0]*D_max])[0]
+            y = self.u3[2]*D_min
+            dy = np.diff([self.u3[2]*D_min, self.u3[2]*D_max])[0]
+            ax3.arrow(x,y,dx,dy,lw=2,color="r")
+
+            x = self.u3[1]*D_min
+            dx = np.diff([self.u3[1]*D_min, self.u3[1]*D_max])[0]
+            y = self.u3[2]*D_min
+            dy = np.diff([self.u3[2]*D_min, self.u3[2]*D_max])[0]
+            ax4.arrow(x,y,dx,dy,lw=2,color="r")

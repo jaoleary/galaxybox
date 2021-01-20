@@ -1,8 +1,13 @@
 from setuptools import setup, find_packages
 
+with open('README.md', 'r', encoding='utf-8') as fh:
+      long_description = fh.read()
+
 setup(name='galaxybox',
       version='0.0.1',
-      description='A set of tools for analysing simulation output',
+      description='A set of tools for analysing EMERGE simulation output',
+      long_description = long_description,
+      long_description_content_type = 'text/markdown',
       author='Joseph A. O\'Leary',
       author_email='joleary@usm.lmu.de',
       license='GNU',

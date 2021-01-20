@@ -826,3 +826,84 @@ class galaxy_trees:
             return Lightcone_cat[['Tree_ID', 'Redshift', 'Redshift_obs', 'X_cone', 'Y_cone', 'Z_cone', 'X_cvel', 'Y_cvel', 'Z_cvel', 'RA', 'Dec']], LC, (min_z, max_z)
         else:
             return Lightcone_cat, LC, (min_z, max_z)
+
+    def merging_time(self, igal_1, igal_2):
+        """Find the cosmic time when two galaxies merge.
+
+        Parameters
+        ----------
+        igal_1 : int
+            ID of the first galaxy
+        igal_2 : int
+            ID of the second galaxy
+
+        Returns
+        -------
+        float
+            The cosmic time when the two input galaxies finally merge. Returns 0 if the galaxies dont ever merge.
+
+        """
+        if self.__leaf:
+            # First we check if these two are in the same tree
+            __roots = self.trees.loc[self.__roots_mask].index.values
+            if not self.sorted:
+                __roots = np.sort(__roots)
+
+            tree_idx = np.searchsorted(__roots, [igal_1, igal_2], side='right') - 1
+
+            # if they arent in the same tree we can stop here.
+            if tree_idx[0] != tree_idx[1]:
+                return 0
+            else:
+                gal_1 = self.trees.loc[igal_1]
+                gal_2 = self.trees.loc[igal_2]
+                
+                if gal_1.Scale != gal_2.Scale:
+                    # if these galaxies arent on the same timestep check if one is a progenitor of the other
+                    if (gal_2.name > gal_1.name) and (gal_2.name <= gal_1.Leaf_ID):
+                        # if its along the main branch return scale of gal_1
+                        main_branch = self.main_branch(gal_1.name).index.values
+                        if gal_2.name in main_branch:
+                            return gal_1.Age
+                        else: #otherwise evolve gal_2 until it merges
+                            while gal_2.Flag == 0:
+                                gal_2 = self.trees.loc[gal_2.Desc_ID]
+                            return gal_2.tdf
+
+                    elif (gal_1.name > gal_2.name) and (gal_1.name <= gal_2.Leaf_ID):
+                        # if its along the main branch return scale of gal_2
+                        main_branch = self.main_branch(gal_2.name).index.values
+                        if gal_1.name in main_branch:
+                            return gal_2.Age
+                        else: #otherwise evolve gal_1 until it merges
+                            while gal_1.Flag == 0:
+                                gal_1 = self.trees.loc[gal_1.Desc_ID]
+                            return gal_1.tdf
+                        
+                    else: #sync the time steps
+                        if gal_1.Scale > gal_2.Scale:
+                            while gal_1.Scale != gal_2.Scale:
+                                gal_2 = self.trees.loc[gal_2.Desc_ID]
+
+                        elif gal_2.Scale > gal_1.Scale:
+                            while gal_1.Scale != gal_2.Scale:
+                                gal_1 = self.trees.loc[gal_1.Desc_ID]
+                
+                # Just step forward until these galaxies have a common desc.
+                while gal_1.Desc_ID != gal_2.Desc_ID:
+                    if (gal_1.Flag==2) or (gal_2.Flag==2):
+                        return 0
+                    gal_1 = self.trees.loc[gal_1.Desc_ID]
+                    gal_2 = self.trees.loc[gal_2.Desc_ID]
+                
+                # take the merging time from the infalling system.
+                if gal_1.MMP == 0:
+                    return gal_1.tdf
+                elif gal_2.MMP == 0:
+                    return gal_2.tdf
+                elif (gal_1.MMP == 0) & (gal_2.MMP==0):
+                    return max(gal_1.tdf, gal_2.tdf)
+                else: #? Probably better raise an error in this case as something has broken.
+                    return 0
+        else:
+            raise NotImplementedError("This method not currently availble for trees that haven't been reindexed.")

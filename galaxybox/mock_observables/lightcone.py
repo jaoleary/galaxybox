@@ -536,57 +536,57 @@ class lightcone():
         vert = self.tesselate(D_min, D_max)
 
         fig = plt.figure(figsize=(12,12))
-        ax1 = fig.add_subplot(2,2,1)
 
+        ax1 = fig.add_subplot(2,2,1)
         ax2 = fig.add_subplot(2,2,2, projection='3d')
         ax2.grid(False)
         ax3 = fig.add_subplot(2,2,3)
         ax4 = fig.add_subplot(2,2,4)
 
-        ax1.set_xlim([vert.min(),vert.max()+200])
-        ax1.set_ylim([vert.min(),vert.max()+200])
+        if equal_aspect:
+            ax1.set_xlim([vert.min(),vert.max()+self.Lbox])
+            ax1.set_ylim([vert.min(),vert.max()+self.Lbox])
+            ax2.set_zlim3d(vert.min(),vert.max()+self.Lbox)
+            ax2.set_ylim3d(vert.min(),vert.max()+self.Lbox)
+            ax2.set_xlim3d(vert.min(),vert.max()+self.Lbox)
+            ax3.set_xlim([vert.min(),vert.max()+self.Lbox])
+            ax3.set_ylim([vert.min(),vert.max()+self.Lbox])
+            ax4.set_xlim([vert.min(),vert.max()+self.Lbox])
+            ax4.set_ylim([vert.min(),vert.max()+self.Lbox])
+
         ax1.set_xlabel('X [cMpc]')
         ax1.set_ylabel('Y [cMpc]')
-
-        ax3.set_xlim([vert.min(),vert.max()+200])
-        ax3.set_ylim([vert.min(),vert.max()+200])
+        ax2.set_xlabel('X [cMpc]')
+        ax2.set_ylabel('Y [cMpc]')
+        ax2.set_zlabel('Z [cMpc]')
         ax3.set_xlabel('X [cMpc]')
         ax3.set_ylabel('Z [cMpc]')
-
-        ax4.set_xlim([vert.min(),vert.max()+200])
-        ax4.set_ylim([vert.min(),vert.max()+200])
         ax4.set_xlabel('Y [cMpc]')
         ax4.set_ylabel('Z [cMpc]')
 
-        for i, og in enumerate(vert):
-            render_cube(ax2,O=og,L=200)
+        if Tesselations:
+            for og in vert:
+                render_cube(ax2,O=og,L=self.Lbox)
 
-            axis = [0,1]
-            rec = coordinate_plane(og,Lbox=200, axes=axis)
-            rec[2:,:] = rec[2:,:][::-1]
-            rec = np.vstack((rec,rec[0,:]))
-            ax1.plot(rec[:,axis[0]],rec[:,axis[1]], 'b',alpha=0.25)
-            
-            axis = [0,2]
-            rec = coordinate_plane(og,Lbox=200, axes=axis)
-            rec[2:,:] = rec[2:,:][::-1]
-            rec = np.vstack((rec,rec[0,:]))
-            ax3.plot(rec[:,axis[0]],rec[:,axis[1]], 'b',alpha=0.25)
-            
-            axis = [1,2]
-            rec = coordinate_plane(og,Lbox=200, axes=axis)
-            rec[2:,:] = rec[2:,:][::-1]
-            rec = np.vstack((rec,rec[0,:]))
-            ax4.plot(rec[:,axis[0]],rec[:,axis[1]], 'b',alpha=0.25)
+                axis = [0,1]
+                rec = coordinate_plane(og,Lbox=self.Lbox, axes=axis)
+                rec[2:,:] = rec[2:,:][::-1]
+                rec = np.vstack((rec,rec[0,:]))
+                ax1.plot(rec[:,axis[0]],rec[:,axis[1]], 'b',alpha=0.25)
+                
+                axis = [0,2]
+                rec = coordinate_plane(og,Lbox=self.Lbox, axes=axis)
+                rec[2:,:] = rec[2:,:][::-1]
+                rec = np.vstack((rec,rec[0,:]))
+                ax3.plot(rec[:,axis[0]],rec[:,axis[1]], 'b',alpha=0.25)
+                
+                axis = [1,2]
+                rec = coordinate_plane(og,Lbox=self.Lbox, axes=axis)
+                rec[2:,:] = rec[2:,:][::-1]
+                rec = np.vstack((rec,rec[0,:]))
+                ax4.plot(rec[:,axis[0]],rec[:,axis[1]], 'b',alpha=0.25)
 
-            ax2.set_zlim3d(vert.min(),vert.max()+200)
-            ax2.set_ylim3d(vert.min(),vert.max()+200)
-            ax2.set_xlim3d(vert.min(),vert.max()+200)
-
-            ax2.set_xlabel('X [cMpc]')
-            ax2.set_ylabel('Y [cMpc]')
-            ax2.set_zlabel('Z [cMpc]')
-
+        if LoS:
             a = Arrow3D([self.u3[0]*D_min, self.u3[0]*D_max], [self.u3[1]*D_min, self.u3[1]*D_max], [self.u3[2]*D_min, self.u3[2]*D_max], mutation_scale=20,
                         lw=2, arrowstyle="-|>", color="r")
             ax2.add_artist(a)
@@ -608,3 +608,29 @@ class lightcone():
             y = self.u3[2]*D_min
             dy = np.diff([self.u3[2]*D_min, self.u3[2]*D_max])[0]
             ax4.arrow(x,y,dx,dy,lw=2,color="r")
+
+        if Cone_edges:
+            r = [-0.5, 0.5]
+            for i, r1 in enumerate(r):
+                for j, r2 in enumerate(r):
+                    vec = rotate(self.u3, angle=self.dd.value * r1, u=self.u1)
+                    vec = rotate(vec, angle=self.da.value * r2, u=self.u2)
+                    ax2.plot([vec[0]*D_min, vec[0]*D_max], [vec[1]*D_min, vec[1]*D_max], [vec[2]*D_min, vec[2]*D_max],lw=2, color='g')
+
+                    x = vec[0]*D_min
+                    dx = np.diff([vec[0]*D_min, vec[0]*D_max])[0]
+                    y = vec[1]*D_min
+                    dy = np.diff([vec[1]*D_min, vec[1]*D_max])[0]
+                    ax1.arrow(x,y,dx,dy,lw=2,color="g")
+
+                    x = vec[0]*D_min
+                    dx = np.diff([vec[0]*D_min, vec[0]*D_max])[0]
+                    y = vec[2]*D_min
+                    dy = np.diff([vec[2]*D_min, vec[2]*D_max])[0]
+                    ax3.arrow(x,y,dx,dy,lw=2,color="g")
+
+                    x = vec[1]*D_min
+                    dx = np.diff([vec[1]*D_min, vec[1]*D_max])[0]
+                    y = vec[2]*D_min
+                    dy = np.diff([vec[2]*D_min, vec[2]*D_max])[0]
+                    ax4.arrow(x,y,dx,dy,lw=2,color="g")

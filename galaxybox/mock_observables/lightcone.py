@@ -283,7 +283,7 @@ class lightcone():
         Returns
         -------
         origins : 2-D array
-            An array containing the 3D coordinates where addinal volumes should be placed.
+            An array containing the 3D coordinates where additional volumes should be placed.
 
         """
         # TODO: This method needs a performance boost
@@ -347,9 +347,28 @@ class lightcone():
         return np.inner(vec, self.u3)
 
     def set_snap_distances(self, distances):
+        """Set the comoving distance to each simulation snapshot.
+
+        Parameters
+        ----------
+        distances : 1-D array of length N-snapshots 
+            An ascending array containing the comoving distance to each snapshot based on the snapshot output redshift.
+        """        
         setattr(self, 'distance', distances)
 
     def get_snapshots(self, origin):
+        """Detemine which snap should could my applied to a tesselate volume based on its comoving distance from the observer
+
+        Parameters
+        ----------
+        origin : 1-D array
+            The 3D coordinates specifying the origin location of a tesselate box.
+
+        Returns
+        -------
+        snap_arg : 1-D array
+            An array with the arguments of applicable snapshots based on the `distances` attribute.
+        """        
         # get the minimum and maximum extent of a box wrt to the origin
         dmin = np.linalg.norm(origin)
         dmax = np.linalg.norm(origin + self.Lbox)
@@ -500,8 +519,20 @@ class lightcone():
         box_coord = np.floor(pos/self.Lbox).astype(int)
         return box_coord
 
-    def plot_cone(self, D_min, D_max):
-        #TODO: provide doc string and clean up method
+    def plot_cone(self, D_min, D_max, equal_aspect=True, LoS=True, Tesselations=True, Cone_edges=False):
+        """Visualize lightcone geometry and box tesselations.
+
+        Parameters
+        ----------
+        D_min : float
+            Minimum comoving distance to place new volumes
+        D_max : float
+            Maximum comoving distance to place new volumes
+        equal_aspect : bool, optional
+            Specifies whether plotting axis will have equal lengths, by default True
+        """        
+        #TODO: This method is a complete mess. It works but needs serious cleanup
+        
         vert = self.tesselate(D_min, D_max)
 
         fig = plt.figure(figsize=(12,12))

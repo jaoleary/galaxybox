@@ -186,6 +186,10 @@ class config:
         fp = open(filepath)
         line = fp.readline().strip('\n')
         if line.startswith('#'):
+            self.build = {} # read in the current build info version, branch, git-hash
+            for b in line.strip('#').split(' - '):
+                key, value = b.split(': ')
+                self.build[key] = value
             line = fp.readline().strip('\n')
         self._cmpl_opt = {}
         while line:

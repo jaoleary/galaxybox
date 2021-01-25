@@ -7,6 +7,7 @@ from . import emerge as em
 from ..helper_functions.functions import *
 from ..io import emerge_io as em_io
 from matplotlib.pyplot import savefig
+import warnings
 
 __author__ = ('Joseph O\'Leary', )
 
@@ -505,6 +506,18 @@ class Universe:
         ----------
         fname : str
             The output figure name
-        """   
-        savefig(os.path.join(self.fig_dir, fname), **kwargs)
+        """
+
+        if hasattr(self.config, 'build'):
+            if 'metadata' in kwargs.keys():
+                kwargs['metadata'] = {**kwargs['metadata'], **self.config.build}
+            else:
+                kwargs['metadata'] = self.config.build.copy()
+            
+            # this will catch the user warning for `Unknown infodict keyword` so we can attach build info
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                savefig(os.path.join(self.fig_dir, fname), **kwargs)
+        else:
+            savefig(os.path.join(self.fig_dir, fname), **kwargs)
 

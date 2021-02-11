@@ -463,7 +463,7 @@ class galaxy_trees:
         col_alias['Leaf_ID'] += ['ileaf', 'id_leaf']
         col_alias['Original_ID'] += ['ogid', 'rockstar_id', 'id_rockstar', 'id_original', 'rs_id', 'id_rs', 'irs', 'rsid']
         col_alias['Num_prog'] += ['np']
-        col_alias['Intra_cluster_mass'] += ['icm']
+        if 'Intra_cluster_mass' in colnames: col_alias['Intra_cluster_mass'] += ['icm']
         col_alias['Stellar_mass_root'] += ['mstar_root', 'root_mstar', 'rootmass', 'root_mass']
         col_alias['Stellar_mass_obs'] += ['mstar_obs']
         col_alias['Halo_radius'] += ['rvir', 'virial_radius', 'radius']

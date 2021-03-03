@@ -6,6 +6,8 @@ from ...mock_observables import lightcone
 from astropy import cosmology as apcos
 from astropy import constants as apconst
 
+from halotools.mock_observables import radial_distance_and_velocity
+
 from tqdm.auto import tqdm
 from scipy.interpolate import interp1d
 import numpy as np
@@ -788,11 +790,23 @@ class galaxy_trees:
                 
                 mask = LC.contained(galaxies[['X_pos', 'Y_pos', 'Z_pos']], mask_only=True)
                 galaxies = galaxies.loc[mask]
-                galaxies[['Redshift', 'Redshift_obs', 'X_cone', 'Y_cone', 'Z_cone', 'X_cvel', 'Y_cvel', 'Z_cvel', 'RA', 'Dec']] = pd.DataFrame(columns=['Redshift', 'Redshift_obs', 'X_cone', 'Y_cone', 'Z_cone', 'X_cvel', 'Y_cvel', 'Z_cvel', 'RA', 'Dec'])
+                galaxies[['Redshift', 'Redshift_obs', 'X_cone', 'Y_cone', 'Z_cone', 'R_dist', 'X_cvel', 'Y_cvel', 'Z_cvel', 'R_vel', 'RA', 'Dec']] = pd.DataFrame(columns=['Redshift', 'Redshift_obs', 'X_cone', 'Y_cone', 'Z_cone', 'R_dist', 'X_cvel', 'Y_cvel', 'Z_cvel', 'R_vel', 'RA', 'Dec'])
                 galaxies[['X_cone', 'Y_cone', 'Z_cone']] = LC.cone_cartesian(galaxies[['X_pos', 'Y_pos', 'Z_pos']])
+                galaxies[['X_cvel', 'Y_cvel', 'Z_cvel']] = LC.cone_cartesian(galaxies[['X_vel', 'Y_vel', 'Z_vel']])
+                
+                if method == 'full_width':
+                    galaxies['R_dist'] = galaxies['Z_cone'].values
+                    galaxies['R_vel'] = galaxies['Z_cvel'].values
+                else:
+                    xp, yp, zp = galaxies['X_pos'].values, galaxies['Y_pos'].values, galaxies['Z_pos'].values
+                    xv, yv, zv = galaxies['X_vel'].values, galaxies['Y_vel'].values, galaxies['Z_vel'].values
+                    xc, yc, zc, vxc, vyc, vzc = 0, 0, 0, 0, 0, 0 # stationary observer at [0,0,0]
+                    galaxies['R_dist'], galaxies['R_vel'] = radial_distance_and_velocity(xp, yp, zp, xv, yv, zv, xc, yc, zc, vxc, vyc, vzc, np.inf)
+                
                 glist = galaxies.copy()  # everything at this snapshot
                 # cut out the right radial extent
-                mask = (galaxies['Z_cone'] >= np.max([smin, D_min])) & (galaxies['Z_cone'] < np.min([smax, D_max]))
+
+                mask = (galaxies['R_dist'] >= np.max([smin, D_min])) & (galaxies['R_dist'] < np.min([smax, D_max]))
                 galaxies = galaxies.loc[mask]
 
                 # added satellites that break the border
@@ -800,19 +814,18 @@ class galaxy_trees:
                     mains = galaxies.loc[galaxies['Type'] == 0]
                     # check if there are any main galaxies
                     if len(mains) > 0:
-                        mains = mains.loc[(mains['Z_cone'].values + mains['Halo_radius'].values) > smax]
+                        mains = mains.loc[(mains['R_dist'].values + mains['Halo_radius'].values) > smax]
                         # do any of these extend over the boundary
                         if len(mains) > 0:
                             sats = glist.loc[glist['Up_ID'].isin(mains.index.values)]
-                            mask = (sats['Z_cone'] >= smax) & (sats['Z_cone'] < D_max)
+                            mask = (sats['R_dist'] >= smax) & (sats['R_dist'] < D_max)
                             # Add those satellites to the galaxy list.
                             galaxies = pd.concat([galaxies, sats.loc[mask]])
 
                 # Add columnes for lightcone coordinates and apparent redshift
                 galaxies[['RA', 'Dec']] = LC.ang_coords(galaxies[['X_pos', 'Y_pos', 'Z_pos']])
-                galaxies[['X_cvel', 'Y_cvel', 'Z_cvel']] = LC.cone_cartesian(galaxies[['X_vel', 'Y_vel', 'Z_vel']])
-                galaxies['Redshift'] = galaxies['Z_cone'].apply(redshift_at_D).values
-                galaxies['Redshift_obs'] = galaxies['Redshift'] + galaxies['Z_cvel'] * (1 + galaxies['Redshift']) / apconst.c.to('km/s').value
+                galaxies['Redshift'] = galaxies['R_dist'].apply(redshift_at_D).values
+                galaxies['Redshift_obs'] = galaxies['Redshift'] + galaxies['R_vel'] * (1 + galaxies['Redshift']) / apconst.c.to('km/s').value
 
                 if (i == 0) & (j == 0):
                     Lightcone_cat = galaxies
@@ -823,7 +836,7 @@ class galaxy_trees:
         Lightcone_cat.reset_index(inplace=True)
         Lightcone_cat.rename(columns={'ID': 'Tree_ID'}, inplace=True)
         if lean:
-            return Lightcone_cat[['Tree_ID', 'Redshift', 'Redshift_obs', 'X_cone', 'Y_cone', 'Z_cone', 'X_cvel', 'Y_cvel', 'Z_cvel', 'RA', 'Dec']], LC, (min_z, max_z)
+            return Lightcone_cat[['Tree_ID', 'Redshift', 'Redshift_obs', 'X_cone', 'Y_cone', 'Z_cone', 'R_dist', 'X_cvel', 'Y_cvel', 'Z_cvel', 'R_vel', 'RA', 'Dec']], LC, (min_z, max_z)
         else:
             return Lightcone_cat, LC, (min_z, max_z)
 

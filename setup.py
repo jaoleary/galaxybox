@@ -21,5 +21,6 @@ setup(name='galaxybox',
             'numpy',
             'pandas',
             'scipy>=1.4.0',
+            'shapely',
             'tqdm'],
       zip_safe=False)

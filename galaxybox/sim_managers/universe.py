@@ -8,6 +8,8 @@ from ..helper_functions.functions import *
 from ..io import emerge_io as em_io
 from matplotlib.pyplot import savefig
 import warnings
+import glob
+from types import SimpleNamespace
 
 __author__ = ('Joseph O\'Leary', )
 
@@ -224,6 +226,7 @@ class Universe:
         col_alias['galaxy_mergers'] = ['galaxy_mergers', 'gmergers', 'mergers']
         col_alias['halo_mergers'] = ['halo_mergers', 'hmergers']
         col_alias['fig_dir'] = ['fig_dir', 'figdir']
+        col_alias['fitting_files'] = ['mcmc', 'fits', 'fitting', 'fit']
 
         for k in col_alias.keys():
             if key.lower() in col_alias[k]:
@@ -258,6 +261,9 @@ class Universe:
 
         if 'halo_mergers' in self.__include:
             self.add_halo_mergers()
+        
+        if 'fitting_files' in self.__include:
+            self.add_fits()
 
     def add_figdir(self, directory_path):
         """Create a directory for saving figures."""
@@ -412,6 +418,23 @@ class Universe:
                 self.galaxy.survey.link_trees(self.galaxy)
         else:
             self.galaxy_survey = survey
+    
+    def add_fits(self):
+        fit = {}
+        files = []
+        for name in glob.glob(self.out_dir+'/pt*'):
+            files.append(name)
+        if len(files)>0:
+            fit['pt'] = em.parallel_tempering(files)
+        
+        files = []
+        for name in glob.glob(self.out_dir+'/mcmc*'):
+            files.append(name)
+        if len(files)>0:
+            fit['mcmc'] = em.mcmc(files)
+        
+        self.fit = SimpleNamespace(**fit)
+        
 
     def flush(self):
         """Delete all data structures in Universe except for config, and params."""
@@ -427,6 +450,10 @@ class Universe:
                 del self.halo
             if hasattr(self, 'halo_mergers'):
                 del self.halo_mergers
+            if hasattr(self, 'galaxy_survey'):
+                del self.galaxy_survey
+            if hasattr(self, 'fit'):
+                del self.fit
 
     def reload(self):
         """Flush then reload data structures in Universe.

@@ -5,6 +5,9 @@ from IPython.display import display, Math
 __author__ = ('Joseph O\'Leary', )
 
 class fit:
+    """A class for reading in and operating on Emerge fitting files
+    alone or within the context of a Universe.
+    """
     # all column names that ARENT model parameters
     _reserved = ['lnprob', 'Temp', 'Scale', 'Frac_accept', 'Step', 'Epoch', 'iwalker']
     def __init__(self, filepath):
@@ -21,12 +24,34 @@ class fit:
         self.data = pd.concat(data)       
 
     def _colnames(self, filepath, skiprows=1):
+        """Grab column names line from fitting file header
+        """        
         with open(filepath) as fp:
             for i, line in enumerate(fp):
                 if i == skiprows:
                     return line
     
-    def _best(self, data, percentile=68, ipython=False, return_latex=False):
+    def _best(self, data, percentile=68.0, ipython=False, return_latex=False):
+        """Determine best fit parameter values given a table of mcmc parameters.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            A table of parameter values
+        percentile : float, optional
+            Percentile value for determining parameter range, by default 68.0
+        ipython : bool, optional
+            Set true to print fancy math when working in Jupyter Notebook, by default False
+        return_latex : bool, optional
+            Return a latex string of best fit parameter values and ranges, by default False
+
+        Returns
+        -------
+        numpy.array
+            Return array containting best fit parameter values and ranges (default behavior)
+        string
+            Return latex formated parameter strings if `return_latex` is `True`
+        """        
         txt=''
         bf =[]
         for key in data.keys():
@@ -44,6 +69,18 @@ class fit:
             return np.array(bf)
         
     def latex_alias(self, key):
+        """Return a latex formated string for model parameters
+
+        Parameters
+        ----------
+        key : string
+            Shorthand model parameter name used in fitting files.
+
+        Returns
+        -------
+        string
+            Latex string for use in displays
+        """        
         col_alias = {}
         # add other aliases.
         col_alias['M0'] = 'M_{0}'
@@ -78,6 +115,8 @@ class mcmc(fit):
         super().__init__(filepath)
     
     def best(self,**kwargs):
+        """See `_best` in parent class
+        """    
         return super()._best(self.data, **kwargs)
         
 class hybrid(fit):
@@ -89,5 +128,7 @@ class parallel_tempering(fit):
         super().__init__(filepath) 
 
     def best(self,**kwargs):
+        """See `_best` in parent class
+        """        
         # we only care about cold walkers for parameter estimation.
         return super()._best(self.data.loc[self.data.Temp==1], **kwargs)

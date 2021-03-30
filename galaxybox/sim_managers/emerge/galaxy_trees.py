@@ -935,7 +935,7 @@ def plot_tree(self, igal, ax=None, x_pos=0.0, min_scale=0.0, spacing=1.0, desc_p
             New x coordinate for the next galaxy on the plot
         """
 
-        # some default plotting configs is no external ax is provided.
+            # some default plotting configs if no external ax is provided.
         if ax is None:
             vmin = self.OutputMassThreshold
             vmax = self.trees.Stellar_mass.max()

@@ -31,7 +31,7 @@ class fit:
                 if i == skiprows:
                     return line
     
-    def _best(self, data, percentile=68.0, ipython=False, return_latex=False):
+    def _best(self, data, percentile=68.0, ipython=False, latex=False):
         """Determine best fit parameter values given a table of mcmc parameters.
 
         Parameters
@@ -52,18 +52,18 @@ class fit:
         string
             Return latex formated parameter strings if `return_latex` is `True`
         """        
-        txt=''
+        txt=[]
         bf =[]
         for key in data.keys():
             if key not in self._reserved:
                 mcmc = np.percentile(data[key].values, [50-percentile/2, 50, 50+percentile/2])
                 q = np.diff(mcmc)
-                s = "{{{3}}} = {0:.4f}_{{-{1:.4f}}}^{{+{2:.4f}}},\;"
-                txt += s.format(mcmc[1], q[0], q[1], self.latex_alias(key))
+                s = '{{{3}}} = {0:.4f}_{{-{1:.4f}}}^{{+{2:.4f}}}'
+                txt += [s.format(mcmc[1], q[0], q[1], self.latex_alias(key))]
                 bf += [[mcmc[1], q[0], q[1]]]
         if ipython:
-            display(Math(txt))
-        if return_latex:
+            display(Math(',\;'.join(txt)))
+        if latex:
             return txt
         else:
             return np.array(bf)
@@ -109,6 +109,16 @@ class fit:
             return col_alias[key]
         else:
             return key
+
+    def free_params(self, latex=False):
+        fp = []
+        for key in self.data.keys():
+            if key not in self._reserved:
+                if latex:
+                    fp += [self.latex_alias(key)]
+                else:
+                    fp += [key]
+        return fp
 
 class mcmc(fit):
     def __init__(self, filepath):

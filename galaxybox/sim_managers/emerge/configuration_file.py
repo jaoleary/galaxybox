@@ -42,7 +42,7 @@ class config:
 
         """
         fp = open(file_path, 'w')
-        fp.write('#compiled config created but `galaxy box`.\n')
+        fp.write('#compiled config created but `galaxybox`.\n')
         for blk in self.__blocks:
             for opt in self.__blocks[blk]:
                 if self.__blocks[blk][opt]['enable']:
@@ -185,7 +185,12 @@ class config:
 
         fp = open(filepath)
         line = fp.readline().strip('\n')
-        if line.startswith('#'):
+        while line.startswith('#'):
+            if not line.startswith('#compiled'):
+                self.build = {} # read in the current build info version, branch, git-hash
+                for b in line.strip('#').split(' - '):
+                    key, value = b.split(': ')
+                    self.build[key] = value
             line = fp.readline().strip('\n')
         self._cmpl_opt = {}
         while line:

@@ -8,6 +8,9 @@ from astropy import constants as apconst
 
 from halotools.mock_observables import radial_distance_and_velocity
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
 from tqdm.auto import tqdm
 from scipy.interpolate import interp1d
 import numpy as np
@@ -465,7 +468,7 @@ class galaxy_trees:
         col_alias['Leaf_ID'] += ['ileaf', 'id_leaf']
         col_alias['Original_ID'] += ['ogid', 'rockstar_id', 'id_rockstar', 'id_original', 'rs_id', 'id_rs', 'irs', 'rsid']
         col_alias['Num_prog'] += ['np']
-        col_alias['Intra_cluster_mass'] += ['icm']
+        if 'Intra_cluster_mass' in colnames: col_alias['Intra_cluster_mass'] += ['icm']
         col_alias['Stellar_mass_root'] += ['mstar_root', 'root_mstar', 'rootmass', 'root_mass']
         col_alias['Stellar_mass_obs'] += ['mstar_obs']
         col_alias['Halo_radius'] += ['rvir', 'virial_radius', 'radius']
@@ -920,3 +923,123 @@ class galaxy_trees:
                     return 0
         else:
             raise NotImplementedError("This method not currently availble for trees that haven't been reindexed.")
+
+    def plot_tree(self, igal, ax=None, x_pos=0.0, min_scale=0.0, spacing=1.0, desc_pos=None, **kwargs):
+            """Create a visual representation for galaxy tree growth.
+
+            Parameters
+            ----------
+            igal : int
+                ID of root galaxy
+            ax : matplotlib ax object
+                the axis on which the tree should be plotted
+            x_pos : float, optional
+                current x coordinate for the galaxy on the plot, by default 0.0
+            min_scale : float, optional
+                The minimum scale factor that should be plotted, by default 0.0
+            spacing : float, optional
+                x spacing between branches, by default 1.0
+            desc_pos : list, optional
+                the (x, y) coordinate of the descendant galaxy on the plot, by default None
+
+            Returns
+            -------
+            x_pos : int, optional
+                New x coordinate for the next galaxy on the plot
+            """
+
+            # some default plotting configs if no external ax is provided.
+            if ax is None:
+                vmin = self.OutputMassThreshold
+                vmax = self.trees.Stellar_mass.max()
+                kwargs['cmap'] = plt.cm.jet
+                kwargs['vmin'] = vmin
+                kwargs['vmax'] = vmax
+                fig, ax = plt.subplots(figsize=(20,13))
+                ax.set_ylabel('Scale factor', fontsize=18)
+                ax.tick_params(axis='x',  labelbottom=False)
+                axins = inset_axes(ax,
+                                    width="100%",
+                                    height="3%",
+                                    loc='lower left',
+                                    bbox_to_anchor=(0., 1.02, 1., .75),
+                                    bbox_transform=ax.transAxes,
+                                    borderpad=0)
+                sm = plt.cm.ScalarMappable(cmap=plt.cm.jet, norm=plt.Normalize(vmin=vmin, vmax=vmax))
+                cbar = plt.colorbar(sm, cax=axins, orientation="horizontal")
+                cbar.ax.xaxis.set_label_position('top')
+                cbar.ax.xaxis.set_ticks_position('top')
+                cbar.ax.minorticks_on()
+                cbar.set_label('$\log_{10}(m/M_{\odot})$', fontsize=18)
+                
+
+            scale = self.trees.loc[igal]['Scale']
+            # add this galaxy to the plot at position [x_pos, scale]
+            ax.scatter([x_pos], [scale], c=[self.trees.loc[igal]['Stellar_mass']], **kwargs)
+
+            if desc_pos is None:
+                # if no desc gal then record the current galaxies position to desc_pos
+                desc_pos = [x_pos, scale]
+            else:
+                # otherwise draw a line to the descendant galaxy
+                ax.plot([desc_pos[0], x_pos], [desc_pos[1], scale],'k-',zorder=0)
+                
+            # get the ID of the most massive progenitor and any coprogenitors
+            immp = int(self.trees.loc[igal]['MMP_ID'])
+            icoprog = int(self.trees.loc[igal]['Coprog_ID'])
+            
+            if scale > min_scale:
+                # walk the main branch first, update the desc_pos argument
+                if immp > 0:
+                    x_pos = self.plot_tree(immp, ax=ax, x_pos=x_pos, min_scale=min_scale, spacing=spacing, desc_pos=[x_pos,scale], **kwargs)
+                # walk the coprogenitors, no update to desc_pos
+                if icoprog > 0:
+                    x_pos += spacing
+                    x_pos = self.plot_tree(icoprog, ax=ax, x_pos=x_pos, min_scale=min_scale, spacing=spacing, desc_pos=desc_pos, **kwargs)
+                    
+            return x_pos
+
+    def scale_at_massfrac(self, igal, frac, interpolate=False):
+        """Determine the scalefactor when a galaxy's mass crossed some fraction of its current mass
+
+        Parameters
+        ----------
+        igal : int or list of ints
+            The ID of the galaxy in the tree.
+        frac : float
+            Target fraction of current galaxy mass
+        interpolate : bool, optional
+            If true mass growth is linearly interpolated between simulation time steps, by default False
+
+        Returns
+        -------
+        list
+            List of scale factors
+
+        """        
+        #TODO: implement interpoliation option
+        log_thresh = np.log10(frac)
+        # get starting values
+        dat = self.trees.loc[igal][['Scale', 'Stellar_mass', 'MMP_ID']].values
+        scale, m0, progid = dat[:,0], dat[:,1], dat[:,2]
+        log_frac = np.full(len(scale), 0.0)
+        progid = progid.astype(int)
+        prog_mask = progid > 0
+        # while galaxies still have progenitors and they are above the threshold.
+        while prog_mask.sum() > 0:
+            log_frac[prog_mask] = self.trees.loc[progid[prog_mask]]['Stellar_mass'].values - m0[prog_mask]
+            thresh_mask = (log_frac < log_thresh)
+            
+            # if threshold is crossed save the id and scale
+            scale[prog_mask & ~thresh_mask] = self.trees.loc[progid[prog_mask & ~thresh_mask]]['Scale'].values
+            igal[prog_mask & ~thresh_mask] = self.trees.loc[progid[prog_mask & ~thresh_mask]].index.values
+            
+            # otherwise update progs and move on
+            progid[prog_mask] = self.trees.loc[progid[prog_mask]]['MMP_ID'].values.astype(int)
+            progid[thresh_mask] = 0
+            prog_mask = progid > 0
+
+        if interpolate:
+            raise NotImplementedError('Interpolated growth between timesteps not yet available')
+        
+        return scale

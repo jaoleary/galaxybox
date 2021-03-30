@@ -911,80 +911,80 @@ class galaxy_trees:
         else:
             raise NotImplementedError("This method not currently availble for trees that haven't been reindexed.")
 
-def plot_tree(self, igal, ax=None, x_pos=0.0, min_scale=0.0, spacing=1.0, desc_pos=None, **kwargs):
-        """Create a visual representation for galaxy tree growth.
+    def plot_tree(self, igal, ax=None, x_pos=0.0, min_scale=0.0, spacing=1.0, desc_pos=None, **kwargs):
+            """Create a visual representation for galaxy tree growth.
 
-        Parameters
-        ----------
-        igal : int
-            ID of root galaxy
-        ax : matplotlib ax object
-            the axis on which the tree should be plotted
-        x_pos : float, optional
-            current x coordinate for the galaxy on the plot, by default 0.0
-        min_scale : float, optional
-            The minimum scale factor that should be plotted, by default 0.0
-        spacing : float, optional
-            x spacing between branches, by default 1.0
-        desc_pos : list, optional
-            the (x, y) coordinate of the descendant galaxy on the plot, by default None
+            Parameters
+            ----------
+            igal : int
+                ID of root galaxy
+            ax : matplotlib ax object
+                the axis on which the tree should be plotted
+            x_pos : float, optional
+                current x coordinate for the galaxy on the plot, by default 0.0
+            min_scale : float, optional
+                The minimum scale factor that should be plotted, by default 0.0
+            spacing : float, optional
+                x spacing between branches, by default 1.0
+            desc_pos : list, optional
+                the (x, y) coordinate of the descendant galaxy on the plot, by default None
 
-        Returns
-        -------
-        x_pos : int, optional
-            New x coordinate for the next galaxy on the plot
-        """
+            Returns
+            -------
+            x_pos : int, optional
+                New x coordinate for the next galaxy on the plot
+            """
 
             # some default plotting configs if no external ax is provided.
-        if ax is None:
-            vmin = self.OutputMassThreshold
-            vmax = self.trees.Stellar_mass.max()
-            kwargs['cmap'] = plt.cm.jet
-            kwargs['vmin'] = vmin
-            kwargs['vmax'] = vmax
-            fig, ax = plt.subplots(figsize=(20,13))
-            ax.set_ylabel('Scale factor', fontsize=18)
-            ax.tick_params(axis='x',  labelbottom=False)
-            axins = inset_axes(ax,
-                                width="100%",
-                                height="3%",
-                                loc='lower left',
-                                bbox_to_anchor=(0., 1.02, 1., .75),
-                                bbox_transform=ax.transAxes,
-                                borderpad=0)
-            sm = plt.cm.ScalarMappable(cmap=plt.cm.jet, norm=plt.Normalize(vmin=vmin, vmax=vmax))
-            cbar = plt.colorbar(sm, cax=axins, orientation="horizontal")
-            cbar.ax.xaxis.set_label_position('top')
-            cbar.ax.xaxis.set_ticks_position('top')
-            cbar.ax.minorticks_on()
-            cbar.set_label('$\log_{10}(m/M_{\odot})$', fontsize=18)
-            
-
-        scale = self.trees.loc[igal]['Scale']
-        # add this galaxy to the plot at position [x_pos, scale]
-        ax.scatter([x_pos], [scale], c=[self.trees.loc[igal]['Stellar_mass']], **kwargs)
-
-        if desc_pos is None:
-            # if no desc gal then record the current galaxies position to desc_pos
-            desc_pos = [x_pos, scale]
-        else:
-            # otherwise draw a line to the descendant galaxy
-            ax.plot([desc_pos[0], x_pos], [desc_pos[1], scale],'k-',zorder=0)
-            
-        # get the ID of the most massive progenitor and any coprogenitors
-        immp = int(self.trees.loc[igal]['MMP_ID'])
-        icoprog = int(self.trees.loc[igal]['Coprog_ID'])
-        
-        if scale > min_scale:
-            # walk the main branch first, update the desc_pos argument
-            if immp > 0:
-                x_pos = self.plot_tree(immp, ax=ax, x_pos=x_pos, min_scale=min_scale, spacing=spacing, desc_pos=[x_pos,scale], **kwargs)
-            # walk the coprogenitors, no update to desc_pos
-            if icoprog > 0:
-                x_pos += spacing
-                x_pos = self.plot_tree(icoprog, ax=ax, x_pos=x_pos, min_scale=min_scale, spacing=spacing, desc_pos=desc_pos, **kwargs)
+            if ax is None:
+                vmin = self.OutputMassThreshold
+                vmax = self.trees.Stellar_mass.max()
+                kwargs['cmap'] = plt.cm.jet
+                kwargs['vmin'] = vmin
+                kwargs['vmax'] = vmax
+                fig, ax = plt.subplots(figsize=(20,13))
+                ax.set_ylabel('Scale factor', fontsize=18)
+                ax.tick_params(axis='x',  labelbottom=False)
+                axins = inset_axes(ax,
+                                    width="100%",
+                                    height="3%",
+                                    loc='lower left',
+                                    bbox_to_anchor=(0., 1.02, 1., .75),
+                                    bbox_transform=ax.transAxes,
+                                    borderpad=0)
+                sm = plt.cm.ScalarMappable(cmap=plt.cm.jet, norm=plt.Normalize(vmin=vmin, vmax=vmax))
+                cbar = plt.colorbar(sm, cax=axins, orientation="horizontal")
+                cbar.ax.xaxis.set_label_position('top')
+                cbar.ax.xaxis.set_ticks_position('top')
+                cbar.ax.minorticks_on()
+                cbar.set_label('$\log_{10}(m/M_{\odot})$', fontsize=18)
                 
-        return x_pos
+
+            scale = self.trees.loc[igal]['Scale']
+            # add this galaxy to the plot at position [x_pos, scale]
+            ax.scatter([x_pos], [scale], c=[self.trees.loc[igal]['Stellar_mass']], **kwargs)
+
+            if desc_pos is None:
+                # if no desc gal then record the current galaxies position to desc_pos
+                desc_pos = [x_pos, scale]
+            else:
+                # otherwise draw a line to the descendant galaxy
+                ax.plot([desc_pos[0], x_pos], [desc_pos[1], scale],'k-',zorder=0)
+                
+            # get the ID of the most massive progenitor and any coprogenitors
+            immp = int(self.trees.loc[igal]['MMP_ID'])
+            icoprog = int(self.trees.loc[igal]['Coprog_ID'])
+            
+            if scale > min_scale:
+                # walk the main branch first, update the desc_pos argument
+                if immp > 0:
+                    x_pos = self.plot_tree(immp, ax=ax, x_pos=x_pos, min_scale=min_scale, spacing=spacing, desc_pos=[x_pos,scale], **kwargs)
+                # walk the coprogenitors, no update to desc_pos
+                if icoprog > 0:
+                    x_pos += spacing
+                    x_pos = self.plot_tree(icoprog, ax=ax, x_pos=x_pos, min_scale=min_scale, spacing=spacing, desc_pos=desc_pos, **kwargs)
+                    
+            return x_pos
 
     def scale_at_massfrac(self, igal, frac, interpolate=False):
         """Determine the scalefactor when a galaxy's mass crossed some fraction of its current mass

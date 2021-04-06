@@ -14,6 +14,17 @@ class config:
         self.load_config(filepath)
         self.__bkp = copy.deepcopy(self.__blocks)
 
+    def __repr__(self):
+        """Report current configuration file setup."""
+        str = ''
+        str += self.header()
+        for blk in self.__blocks:
+            str += self.blkheader(name=blk) + '\n'
+            for opt in self.__blocks[blk]:
+                str += self.optwrite(block=blk, option=opt) + '\n'
+        str += '#\n' + self.cmtln(100)
+        return str
+
     def write(self, file_path):
         """Write the current configuration to a file.
 
@@ -338,22 +349,6 @@ class config:
                         self.__blocks[k][option][v] = kwargs[v]
                     else:
                         raise KeyError('`{}`'.format(v) + ' is not a valid option key')
-
-    def avail(self):
-        """Report available configuraion options."""
-        for k in self.__blocks:
-            print(k + ':')
-            for opt in self.__blocks[k]:
-                print(self.blank(4) + opt)
-
-    def current(self):
-        """Report current configuration file setup."""
-        print(self.header())
-        for blk in self.__blocks:
-            print(self.blkheader(name=blk))
-            for opt in self.__blocks[blk]:
-                print(self.optwrite(block=blk, option=opt))
-        print('#\n' + self.cmtln(100))
 
     def set_all(self, block=None, enable=True):
         """Enable or disable all config options in block or file.

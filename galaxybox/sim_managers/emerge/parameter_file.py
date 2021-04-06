@@ -14,6 +14,16 @@ class params:
         self.__desc_indent = 49
         self.load_params(filepath)
         self.__bkp = copy.deepcopy(self.__blocks)
+    
+    def __repr__(self):
+        """Report current parameter file setup."""
+        str = ''
+        str += self.header()
+        for blk in self.__blocks:
+            str += self.blkheader(name=blk)  + '\n'
+            for opt in self.__blocks[blk]:
+                str += self.optwrite(block=blk, option=opt)  + '\n'
+        return str
 
     def load_params(self, filepath):
         """Import emerge `.param` file.
@@ -270,18 +280,3 @@ class params:
                         self.__blocks[k][option][v] = kwargs[v]
                     else:
                         raise KeyError('`{}`'.format(v) + ' is not a valid option key')
-
-    def avail(self):
-        """Report available configuraion options."""
-        for k in self.__blocks:
-            print(k + ':')
-            for opt in self.__blocks[k]:
-                print(self.blank(4) + opt)
-
-    def current(self):
-        """Report current configuration file setup."""
-        print(self.header())
-        for blk in self.__blocks:
-            print(self.blkheader(name=blk))
-            for opt in self.__blocks[blk]:
-                print(self.optwrite(block=blk, option=opt))

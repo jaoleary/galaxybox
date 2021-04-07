@@ -132,6 +132,11 @@ class mcmc(fit):
 class hybrid(fit):
     def __init__(self, filepath):
         super().__init__(filepath)
+    
+    def best(self,**kwargs):
+        """See `_best` in parent class
+        """        
+        return super()._best(self.data, **kwargs)
 
 class parallel_tempering(fit):
     def __init__(self, filepath):

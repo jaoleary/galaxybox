@@ -1,6 +1,7 @@
 """Classes for handling Emerge data."""
 import numpy as np
 import copy
+from astropy import cosmology as apcos
 
 __author__ = ('Joseph O\'Leary', )
 
@@ -14,6 +15,11 @@ class params:
         self.__desc_indent = 49
         self.load_params(filepath)
         self.__bkp = copy.deepcopy(self.__blocks)
+    
+        self.cosmology = apcos.LambdaCDM(H0=self.get_param('HubbleParam') * 100,
+                                        Om0=self.get_param('Omega0'),
+                                        Ode0=self.get_param('OmegaLambda'),
+                                        Ob0=self.get_param('OmegaBaryon')) 
     
     def __repr__(self):
         """Report current parameter file setup."""
@@ -280,3 +286,10 @@ class params:
                         self.__blocks[k][option][v] = kwargs[v]
                     else:
                         raise KeyError('`{}`'.format(v) + ' is not a valid option key')
+
+    def get_param(self, option):
+        for b in self.__blocks:
+            if option in self.__blocks[b].keys():
+                return self.__blocks[b][option]['value']
+
+        

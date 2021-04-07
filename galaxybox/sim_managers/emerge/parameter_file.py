@@ -1,6 +1,7 @@
 """Classes for handling Emerge data."""
 import numpy as np
 import copy
+from astropy import cosmology as apcos
 
 __author__ = ('Joseph O\'Leary', )
 
@@ -14,6 +15,21 @@ class params:
         self.__desc_indent = 49
         self.load_params(filepath)
         self.__bkp = copy.deepcopy(self.__blocks)
+    
+        self.cosmology = apcos.LambdaCDM(H0=self.get_param('HubbleParam') * 100,
+                                        Om0=self.get_param('Omega0'),
+                                        Ode0=self.get_param('OmegaLambda'),
+                                        Ob0=self.get_param('OmegaBaryon')) 
+    
+    def __repr__(self):
+        """Report current parameter file setup."""
+        str = ''
+        str += self.header()
+        for blk in self.__blocks:
+            str += self.blkheader(name=blk)  + '\n'
+            for opt in self.__blocks[blk]:
+                str += self.optwrite(block=blk, option=opt)  + '\n'
+        return str
 
     def load_params(self, filepath):
         """Import emerge `.param` file.
@@ -271,17 +287,9 @@ class params:
                     else:
                         raise KeyError('`{}`'.format(v) + ' is not a valid option key')
 
-    def avail(self):
-        """Report available configuraion options."""
-        for k in self.__blocks:
-            print(k + ':')
-            for opt in self.__blocks[k]:
-                print(self.blank(4) + opt)
+    def get_param(self, option):
+        for b in self.__blocks:
+            if option in self.__blocks[b].keys():
+                return self.__blocks[b][option]['value']
 
-    def current(self):
-        """Report current configuration file setup."""
-        print(self.header())
-        for blk in self.__blocks:
-            print(self.blkheader(name=blk))
-            for opt in self.__blocks[blk]:
-                print(self.optwrite(block=blk, option=opt))
+        

@@ -37,8 +37,8 @@ P200 = gb.Universe(param_path = '../Programs/emerge/parameterfiles/P200.param', 
 The basic import allows the user to inspect/edit the parameter file, as well as the configuration file used to run a given model. these structures can be accessed with:
 
 ```python
-P200.params.current()
-P200.config.current()
+P200.params
+P200.config
 ```
 
 Output data from emerge can be loaded into the object with the 'add' methods. For instance the **statsitics.h5** file can be imported by executing:
@@ -103,7 +103,7 @@ This is just a snippet of what you can do with with these tools. Most of the cod
 
 ## Notebooks
 
-Paper: [EMERGE: Empirical predictions of galaxy merger rates since z~6](https://ui.adsabs.harvard.edu/abs/2020arXiv200102687O/abstract)\
+Paper: [EMERGE: Empirical predictions of galaxy merger rates since z~6](https://ui.adsabs.harvard.edu/abs/2021MNRAS.501.3215O/abstract)\
 Notebook: [2001.02687](https://github.com/jaoleary/2001.02687)
 
 Paper: [EMERGE: Constraining merging probabilities and timescales of close galaxy pairs](https://ui.adsabs.harvard.edu/abs/2020arXiv201105341O/abstract)\

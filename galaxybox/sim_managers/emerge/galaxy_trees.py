@@ -75,6 +75,12 @@ class galaxy_trees:
         else:
             self.__leaf = False
 
+    def __repr__(self):
+        """pass through the pandas dataframe __repr__"""
+        #TODO: there is likely a more informative usage of this method.
+        return repr(self.trees)
+
+    #TODO: the `add` approach for class start up is bad. switch to using properties...
     @classmethod
     def from_universe(cls, Universe):
         """Initiate a `galaxy_tree` within the `Universe` class
@@ -91,17 +97,17 @@ class galaxy_trees:
         """
         add = {'out_dir': Universe.out_dir,
                'fig_dir': Universe.fig_dir,
-               'NumFiles': Universe.NumFilesInParallel,
-               'ModelName': Universe.ModelName,
-               'BoxSize': Universe.BoxSize,
-               'UnitTime_in_yr': Universe.UnitTime_in_yr,
-               'Fraction_Escape_ICM': Universe.Fraction_Escape_ICM,
-               'OutputMassThreshold': Universe.OutputMassThreshold,
-               'TreeRootRedshift': Universe.TreeRootRedshift,
+               'NumFiles': Universe.params.get_param('NumFilesInParallel'),
+               'ModelName': Universe.params.get_param('ModelName'),
+               'BoxSize': Universe.params.get_param('BoxSize'),
+               'UnitTime_in_yr': Universe.params.get_param('UnitTime_in_yr'),
+               'Fraction_Escape_ICM': Universe.params.get_param('Fraction_Escape_ICM'),
+               'OutputMassThreshold': Universe.params.get_param('OutputMassThreshold'),
+               'TreeRootRedshift': Universe.params.get_param('TreeRootRedshift'),
                'cosmology': Universe.cosmology}
         trees_path = []
-        for i in range(Universe.NBoxDivisions**3):
-            if Universe.OutputFormat == 1:
+        for i in range(Universe.params.get_param('NBoxDivisions')**3):
+            if Universe.params.get_param('OutputFormat') == 1:
                 trees_path.append(os.path.join(Universe.out_dir, 'trees/tree.{:d}.out'.format(i)))
             else:
                 trees_path.append(os.path.join(Universe.out_dir, 'trees/tree.{:d}.h5'.format(i)))
@@ -1016,7 +1022,7 @@ class galaxy_trees:
         list
             List of scale factors
 
-        """        
+        """
         #TODO: implement interpoliation option
         log_thresh = np.log10(frac)
         # get starting values

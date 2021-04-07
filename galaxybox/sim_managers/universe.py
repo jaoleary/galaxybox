@@ -46,17 +46,13 @@ class Universe:
         else:
             raise NotImplementedError('Currently only Emerge data is supported')
 
-        # set dictionary paramter values as class attributes
-        for i, k in enumerate(params.keys()):
-            setattr(self, k, params[k])
-
-        # this param scheme needs to be updated later. with class implemented, no reason to unpack as attrs in universe.
-        self.params = em.params(self.param_path)
-        self.emerge_dir = os.path.abspath(self.param_path.split('parameterfiles')[0])
-        self.out_dir = os.path.join(self.emerge_dir, 'output', self.ModelName)
-
         if self.sim_type == 'EMERGE':
+            self.params = em.params(self.param_path)
+            self.emerge_dir = os.path.abspath(self.param_path.split('parameterfiles')[0])
+            self.out_dir = os.path.join(self.emerge_dir, 'output', self.params.get_param('ModelName'))
+            self.TreefileName = self.params.get_param('TreefileName')
             tree_dir, tree_base = os.path.split(self.TreefileName)
+            
 
             # check if this is a directory already
             if os.path.isdir(tree_dir):
@@ -72,7 +68,7 @@ class Universe:
                 os.chdir(cwd)
 
             self.TreefileName = os.path.abspath(self.TreefileName)
-            self.num_procs = self.NumFilesInParallel
+            self.num_procs = self.params.get_param('NumFilesInParallel')
 
             template_config_path = os.path.abspath(self.emerge_dir + '/Template-Config.sh')
             if os.path.isfile(template_config_path):
@@ -84,8 +80,6 @@ class Universe:
         else:
             raise NotImplementedError('Currently only Emerge data is supported')
 
-        # set cosmology using parameterfile values
-        self.set_cosmology()
 
         if include is not None:
             include = list(np.atleast_1d(include))
@@ -94,6 +88,10 @@ class Universe:
 
         else:
             self.fig_dir = self.out_dir
+
+    @property
+    def cosmology(self):
+        return self.params.cosmology
 
     @classmethod
     def new(cls, emerge_dir, model_name, include=None):
@@ -194,13 +192,6 @@ class Universe:
             include = [idx.upper() for idx in include]
             u.__setattr__('_Universe__include', include)
         return u
-
-    def set_cosmology(self):
-        """Set the class cosmology using the cosmological parmeters in the parameters file."""
-        self.cosmology = apcos.LambdaCDM(H0=self.HubbleParam * 100,
-                                             Om0=self.Omega0,
-                                             Ode0=self.OmegaLambda,
-                                             Ob0=self.OmegaBaryon)
 
     def alias(self, key):
         """Return proper coloumn key for input alias key.

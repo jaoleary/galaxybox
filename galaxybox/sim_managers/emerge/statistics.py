@@ -46,7 +46,7 @@ class statistics:
         """
         add = {'out_dir': Universe.out_dir,
                'fig_dir': Universe.fig_dir,
-               'ModelName': Universe.ModelName,
+               'ModelName': Universe.params.get_param('ModelName'),
                'cosmology': Universe.cosmology}
         return cls(os.path.join(Universe.out_dir, 'statistics.h5'), add)
 

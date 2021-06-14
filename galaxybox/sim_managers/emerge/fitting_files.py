@@ -17,7 +17,7 @@ class fit:
             header = self._colnames(fp)
             header = header.strip('# ')
             header = header.strip('\n')
-            header = header.split(' ')
+            header = header.split()
             for i, key in enumerate(header):
                 header[i] = key.split(')')[-1]
             data += [pd.read_csv(fp, comment='#', delimiter = '\s+', engine = 'python', names=header)]
@@ -59,7 +59,7 @@ class fit:
                 mcmc = np.percentile(data[key].values, [50-percentile/2, 50, 50+percentile/2])
                 q = np.diff(mcmc)
                 s = '{{{3}}} = {0:.4f}_{{-{1:.4f}}}^{{+{2:.4f}}}'
-                txt += [s.format(mcmc[1], q[0], q[1], self.latex_alias(key))]
+                txt += [s.format(mcmc[1], q[0], q[1], self.alias(key))]
                 bf += [[mcmc[1], q[0], q[1]]]
         if ipython:
             display(Math(',\;'.join(txt)))
@@ -68,45 +68,52 @@ class fit:
         else:
             return np.array(bf)
         
-    def latex_alias(self, key):
-        """Return a latex formated string for model parameters
+    def alias(self, key, form='latex'):
+        """Return a latex or parameter file formated string for model parameters
 
         Parameters
         ----------
         key : string
             Shorthand model parameter name used in fitting files.
+        form : string
+            Set to `param` to return the parameter file value, by default `latex`
 
         Returns
         -------
         string
             Latex string for use in displays
-        """        
+        """
+
+        # return a latex alias or the parameter file key name
+        idx = {'latex':0,
+               'param':1}
+
         col_alias = {}
-        # add other aliases.
-        col_alias['M0'] = 'M_{0}'
-        col_alias['MZ'] = 'M_{z}'
-        col_alias['E0'] = '\\epsilon_{0}'
-        col_alias['EZ'] = '\\epsilon_{z}'
-        col_alias['EM'] = '\\epsilon_{m}'
-        col_alias['B0'] = '\\beta_{0}'
-        col_alias['BZ'] = '\\beta_{z}'
-        col_alias['G0'] = '\\gamma_{0}'
-        col_alias['GZ'] = '\\gamma_{z}'
-        col_alias['Fesc'] = 'f_{\\mathrm{esc}}'
-        col_alias['Fstrip'] = 'f_{\\mathrm{s}}'
-        col_alias['Tau0'] = '\\tau_{0}'
-        col_alias['TauS'] = '\\tau_{s}'
-        col_alias['TauD'] = '\\tau_{d}'
-        col_alias['IonZ'] = 'z_{\\mathrm{ion}}'
-        col_alias['IonM'] = 'M_{\\mathrm{ion}}'
-        col_alias['IonR'] = 'R_{\\mathrm{ion}}'
-        col_alias['MRI0'] = 'M_{\\mathrm{RI}}'
-        col_alias['MRIZ'] = 'M_{\\mathrm{RI} z}'
-        col_alias['A0']   = '\\alpha_{0}'
-        col_alias['AZ']   = '\\alpha_{z}'
+        # set aliases.
+        col_alias['M0'] = ['M_{0}', 'Eff_MassPeak']
+        col_alias['MZ'] = ['M_{z}', 'Eff_MassPeak_Z']
+        col_alias['E0'] = ['\\epsilon_{0}', 'Eff_Normalisation']
+        col_alias['EZ'] = ['\\epsilon_{z}', 'Eff_Normalisation_Z']
+        col_alias['EM'] = ['\\epsilon_{m}', 'Eff_Normalisation_M']
+        col_alias['B0'] = ['\\beta_{0}', 'Eff_LowMassSlope']
+        col_alias['BZ'] = ['\\beta_{z}', 'Eff_LowMassSlope_Z']
+        col_alias['G0'] = ['\\gamma_{0}', 'Eff_HighMassSlope']
+        col_alias['GZ'] = ['\\gamma_{z}', 'Eff_HighMassSlope_Z']
+        col_alias['Fesc'] = ['f_{\\mathrm{esc}}', 'Fraction_Escape_ICM']
+        col_alias['Fstrip'] = ['f_{\\mathrm{s}}', 'Fraction_Stripping']
+        col_alias['Tau0'] = ['\\tau_{0}', 'Timescale_Quenching']
+        col_alias['TauS'] = ['\\tau_{s}', 'Slope_Quenching']
+        col_alias['TauD'] = ['\\tau_{d}', 'Decay_Quenching']
+        col_alias['IonA'] = ['a_{\\mathrm{ion}}', 'Reionization_Scale']
+        col_alias['IonM'] = ['M_{\\mathrm{ion}}', 'Reionization_Mass']
+        col_alias['IonR'] = ['R_{\\mathrm{ion}}', 'Reionization_Rate']
+        col_alias['MRI0'] = ['M_{\\mathrm{RI}}', 'Eff_ReionizationMass']
+        col_alias['MRIZ'] = ['M_{\\mathrm{RI} z}', 'Eff_ReionizationMass_Z']
+        col_alias['A0']   = ['\\alpha_{0}', 'Eff_ReionizationSlope']
+        col_alias['AZ']   = ['\\alpha_{z}', 'Eff_ReionizationSlope_Z']
 
         if key in col_alias.keys():
-            return col_alias[key]
+            return col_alias[key][idx[form]]
         else:
             return key
 
@@ -115,10 +122,17 @@ class fit:
         for key in self.data.keys():
             if key not in self._reserved:
                 if latex:
-                    fp += [self.latex_alias(key)]
+                    fp += [self.alias(key)]
                 else:
                     fp += [key]
         return fp
+
+    def update_params(self):
+        """Update the free parameters in the parameter file with best fit values"""
+        if hasattr(self, '_params'):
+            b = np.around(self.best(), decimals=5)
+            for i, p in enumerate(self.free_params()):
+                self._params.update(option=self.alias(p, form='param'), value=b[i,0])
 
 class mcmc(fit):
     def __init__(self, filepath):

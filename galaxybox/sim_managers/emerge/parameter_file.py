@@ -11,7 +11,7 @@ class params:
 
     def __init__(self, filepath):
         """Initialize the configuration."""
-        self.__val_indent = 29
+        self.__val_indent = 30
         self.__desc_indent = 49
         self.load_params(filepath)
         self.__bkp = copy.deepcopy(self.__blocks)
@@ -28,7 +28,7 @@ class params:
         for blk in self.__blocks:
             str += self.blkheader(name=blk)  + '\n'
             for opt in self.__blocks[blk]:
-                str += self.optwrite(block=blk, option=opt)  + '\n'
+                str += self.write(block=blk, option=opt)  + '\n'
         return str
 
     def load_params(self, filepath):
@@ -78,7 +78,7 @@ class params:
                     self.__blocks[blkkey][name]['value'] = value
                     self.__blocks[blkkey][name]['description'] = description
 
-    def write(self, file_path):
+    def export(self, file_path):
         """Write the current parameter configuration to a file.
 
         Parameters
@@ -92,7 +92,7 @@ class params:
         for blk in self.__blocks:
             fp.write('\n' + self.blkheader(name=blk))
             for opt in self.__blocks[blk]:
-                fp.write('\n' + self.optwrite(block=blk, option=opt))
+                fp.write('\n' + self.write(block=blk, option=opt))
         fp.write('\n')
         fp.close()
 
@@ -169,7 +169,7 @@ class params:
         headerstr += self.cmtln(124)
         return headerstr
 
-    def optwrite(self, block, option):
+    def write(self, block, option):
         """Create a formated string for printing a parameter option to file.
 
         Parameters
@@ -233,7 +233,7 @@ class params:
 
         return enable + option + vspace + optstr + dspace + description
 
-    def optadd(self, block, option, enable=False, value=None, description=' '):
+    def add(self, block, option, enable=False, value=None, description=' '):
         """Add a new parameter.
 
         Parameters
@@ -255,20 +255,20 @@ class params:
 
         for k in self.__blocks:
             if option in self.__blocks[k].keys():
-                raise KeyError('Option ' + option + ' already exists. Use `.optupdate()` method.')
+                raise KeyError('Option ' + option + ' already exists. Use `.update()` method.')
 
         self.__blocks[block][option] = {}
         self.__blocks[block][option]['enable'] = enable
         self.__blocks[block][option]['value'] = value
         self.__blocks[block][option]['description'] = description
 
-    def optupdate(self, option, force=False, **kwargs):
+    def update(self, option, force=False, **kwargs):
         """Update a parameter file option.
 
         Parameters
         ----------
         option : string
-            Configuration file option name
+            parameter file key name
         enable : bool, optional
             Whether an option should be enabled in config file, or commented out.
         value : int, float, optional
@@ -288,8 +288,39 @@ class params:
                         raise KeyError('`{}`'.format(v) + ' is not a valid option key')
 
     def get_param(self, option):
+        """Return the parameter file value for a specified input key
+
+        Parameters
+        ----------
+        option : string
+            parameter file key name
+
+        Returns
+        -------
+        value
+            The parameter file value for the input key
+        """        
         for b in self.__blocks:
             if option in self.__blocks[b].keys():
                 return self.__blocks[b][option]['value']
+        raise KeyError('`{}` is not a valid parameter key'.format(option))
+
+    def exists(self, option):
+        """Check if a parameter file option already exists
+
+        Parameters
+        ----------
+        option : string
+            parameter file key name
+
+        Returns
+        -------
+        Bool
+            True of option already exists, false otherwise
+        """        
+        for b in self.__blocks:
+            if option in self.__blocks[b].keys():
+                return True
+        return False
 
         

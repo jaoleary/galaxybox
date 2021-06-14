@@ -271,10 +271,10 @@ class Universe:
         else:
             print('The statistics class is not available for simulation type ' + self.sim_type + '.')
 
-    def add_galaxy_trees(self):
+    def add_galaxy_trees(self, **kwargs):
         """Add the forest class as a Universe attribute."""
         if self.sim_type == 'EMERGE':
-            self.galaxy = em.galaxy_trees.from_universe(self)
+            self.galaxy = em.galaxy_trees.from_universe(self, **kwargs)
         else:
             print('The galaxy_trees class is not available for simulation type ' + self.sim_type + '.')
 

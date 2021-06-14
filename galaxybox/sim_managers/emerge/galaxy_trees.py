@@ -80,7 +80,7 @@ class galaxy_trees:
 
     #TODO: the `add` approach for class start up is bad. switch to using properties...
     @classmethod
-    def from_universe(cls, Universe):
+    def from_universe(cls, Universe, **kwargs):
         """Initiate a `galaxy_tree` within the `Universe` class
 
         Parameters
@@ -93,7 +93,13 @@ class galaxy_trees:
         galaxybox.galaxy_trees
             galaxy trees set from the universe
         """
-        add = {'out_dir': Universe.out_dir,
+        # this is a terrible approach.
+        try:
+            kwargs
+        except:
+            kwargs={}
+
+        kwargs['add_attrs'] = {'out_dir': Universe.out_dir,
                'fig_dir': Universe.fig_dir,
                'NumFiles': Universe.params.get_param('NumFilesInParallel'),
                'ModelName': Universe.params.get_param('ModelName'),
@@ -109,7 +115,7 @@ class galaxy_trees:
                 trees_path.append(os.path.join(Universe.out_dir, 'trees/tree.{:d}.out'.format(i)))
             else:
                 trees_path.append(os.path.join(Universe.out_dir, 'trees/tree.{:d}.h5'.format(i)))
-        return cls(trees_path, add_attrs=add)
+        return cls(trees_path, **kwargs)
 
     @classmethod
     def from_file(cls, tree_dir, fields_out=None):

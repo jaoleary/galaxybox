@@ -49,10 +49,8 @@ class Universe:
         if self.sim_type == 'EMERGE':
             self.params = em.params(self.param_path)
             self.emerge_dir = os.path.abspath(self.param_path.split('parameterfiles')[0])
-            self.out_dir = os.path.join(self.emerge_dir, 'output', self.params.get_param('ModelName'))
             self.TreefileName = self.params.get_param('TreefileName')
             tree_dir, tree_base = os.path.split(self.TreefileName)
-            
 
             # check if this is a directory already
             if os.path.isdir(tree_dir):
@@ -85,13 +83,35 @@ class Universe:
             include = list(np.atleast_1d(include))
             self.__include = [self.alias(key) for key in include]
             self.__add()
-
         else:
             self.fig_dir = self.out_dir
 
     @property
     def cosmology(self):
         return self.params.cosmology
+
+    @property
+    def out_dir(self):
+            # Older parameter files wont have the OutputDir param, so we catch that here.
+            try:
+                out_dir = os.path.join(self.params.get_param('OutputDir'), self.params.get_param('ModelName'))
+            except:
+                out_dir = os.path.join(self.emerge_dir, 'output', self.params.get_param('ModelName'))
+
+            # check if this is a directory already
+            if os.path.isdir(out_dir):
+                pass
+            else:
+                cwd = os.getcwd()
+                # temprorarily set the working directory to the emerge directory
+                os.chdir(self.emerge_dir)
+                if os.path.isabs(out_dir):
+                    # assume it should have been relative since it failed the `isdir` check
+                    out_dir = '.' + out_dir
+                out_dir = os.path.abspath(out_dir)
+                os.chdir(cwd)
+
+            return os.path.abspath(out_dir)
 
     @classmethod
     def new(cls, emerge_dir, model_name, include=None):
@@ -423,6 +443,10 @@ class Universe:
             files.append(name)
         if len(files)>0:
             fit['mcmc'] = em.mcmc(files)
+
+        # link the fits to the parameter file, needs this for the fit class to update the file
+        for k in fit.keys():
+            setattr(fit[k], '_params', self.params)
         
         self.fit = SimpleNamespace(**fit)
         
@@ -500,7 +524,7 @@ class Universe:
 
         """
         if params:
-            self.params.write(self.param_path)
+            self.params.export(self.param_path)
         if config:
             self.config.write(self.emerge_dir + '/Config.sh')
         if flush:

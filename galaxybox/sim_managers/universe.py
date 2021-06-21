@@ -298,6 +298,14 @@ class Universe:
         else:
             print('The galaxy_trees class is not available for simulation type ' + self.sim_type + '.')
 
+    def add_galaxy_catalog(self, galaxies_path=None):
+        """Add the galaxies class as a Universe attribute."""
+        if self.sim_type == 'EMERGE':
+            print('Loading galaxy lists:')
+            self.galaxy = em.galaxy_catalog.from_universe(self)
+        else:
+            print('The galaxy class is not available for simulation type ' + self.sim_type + '.')
+
     def add_galaxy_mergers(self, source=None, save=True, **kwargs):
         """Add the `mergers` class as a Universe attribute.
 

@@ -1,5 +1,5 @@
 """Classes for handling Emerge galaxy merger tree data."""
-from ...io.emerge_io import read_tree
+from ...io.emerge_io import read_outputs
 from ...helper_functions import arg_parser
 from ...mock_observables import lightcone
 
@@ -46,7 +46,7 @@ class galaxy_trees:
 
         frames = [None] * len(self.trees_used)
         for i, file in enumerate(tqdm(self.trees_used, desc='Loading galaxy trees')):
-            frames[i] = read_tree(file, fields_out=fields_out)
+            frames[i] = read_outputs(file, fields_out=fields_out, key='MergerTree/Galaxy')
         forest = pd.concat(frames)
 
         forest.set_index('ID', drop=True, inplace=True)

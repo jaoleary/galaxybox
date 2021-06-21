@@ -1,3 +1,5 @@
+from ...helper_functions import arg_parser
+
 import numpy as np
 import pandas as pd
 from IPython.display import display, Math
@@ -21,7 +23,7 @@ class fit:
             for i, key in enumerate(header):
                 header[i] = key.split(')')[-1]
             data += [pd.read_csv(fp, comment='#', delimiter = '\s+', engine = 'python', names=header)]
-        self.data = pd.concat(data)       
+        self._data = pd.concat(data)       
 
     def _colnames(self, filepath, skiprows=1):
         """Grab column names line from fitting file header
@@ -89,7 +91,7 @@ class fit:
                'param':1}
 
         col_alias = {}
-        # set aliases.
+        # set parameter aliases.
         col_alias['M0'] = ['M_{0}', 'Eff_MassPeak']
         col_alias['MZ'] = ['M_{z}', 'Eff_MassPeak_Z']
         col_alias['E0'] = ['\\epsilon_{0}', 'Eff_Normalisation']
@@ -119,7 +121,7 @@ class fit:
 
     def free_params(self, latex=False):
         fp = []
-        for key in self.data.keys():
+        for key in self._data.keys():
             if key not in self._reserved:
                 if latex:
                     fp += [self.alias(key)]
@@ -127,12 +129,39 @@ class fit:
                     fp += [key]
         return fp
 
-    def update_params(self):
+    def update_params(self, **kwargs):
         """Update the free parameters in the parameter file with best fit values"""
         if hasattr(self, '_params'):
-            b = np.around(self.best(), decimals=5)
+            b = np.around(self.best(**kwargs), decimals=5)
             for i, p in enumerate(self.free_params()):
                 self._params.update(option=self.alias(p, form='param'), value=b[i,0])
+
+    def data(self,**kwargs):
+        # set all kwargs to lowercase
+        keys = list(kwargs.keys())
+        for i, kw in enumerate(keys):
+            kwargs[kw.lower()] = kwargs.pop(kw)
+
+        # Setup a default `True` mask
+        mask = self._data['Epoch'] > -1
+        # Loop of each column in the tree and check if a min/max value mask should be created.
+        for i, key in enumerate(self._data.keys()):
+            for j, kw in enumerate(kwargs.keys()):
+                if key.lower() in kw.lower():
+                    if 'min' in kw.lower():
+                        mask = mask & (self._data[key] >= kwargs[kw])
+                    elif 'max' in kw.lower():
+                        mask = mask & (self._data[key] < kwargs[kw])
+                    else:
+                        values = np.atleast_1d(kwargs[kw])
+                        # Setup a default `False` mask
+                        sub_mask = self._data['Epoch'] < 0
+                        for v in values:
+                            sub_mask = sub_mask | (self._data[key] == v)
+                        mask = mask & sub_mask
+        
+        return self._data.loc[mask]
+
 
 class mcmc(fit):
     def __init__(self, filepath):
@@ -141,7 +170,7 @@ class mcmc(fit):
     def best(self,**kwargs):
         """See `_best` in parent class
         """    
-        return super()._best(self.data, **kwargs)
+        return super()._best(super().data(), **kwargs)
         
 class hybrid(fit):
     def __init__(self, filepath):
@@ -150,7 +179,7 @@ class hybrid(fit):
     def best(self,**kwargs):
         """See `_best` in parent class
         """        
-        return super()._best(self.data, **kwargs)
+        return super()._best(super().data(), **kwargs)
 
 class parallel_tempering(fit):
     def __init__(self, filepath):
@@ -158,6 +187,7 @@ class parallel_tempering(fit):
 
     def best(self,**kwargs):
         """See `_best` in parent class
-        """        
+        """
+        best_kwargs, kwargs = arg_parser(super()._best, drop=True, **kwargs)
         # we only care about cold walkers for parameter estimation.
-        return super()._best(self.data.loc[self.data.Temp==1], **kwargs)
+        return super()._best(super().data(temp=1, **kwargs), **best_kwargs)

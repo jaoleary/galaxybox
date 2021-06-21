@@ -73,6 +73,11 @@ class galaxy_trees:
         else:
             self.__leaf = False
 
+        # outputs no longer include the `Age` parameter. set up an interp func for quicker comp on large datasets
+        # TODO: update to chaching/precomputing as there are only a fixed number of scale factors in any dataset.
+        a = np.linspace(0,1,1000000)
+        self.__age = interp1d(a,self.cosmology.age(1/a - 1).value)
+  
     def __repr__(self):
         """pass through the pandas dataframe __repr__"""
         #TODO: there is likely a more informative usage of this method.
@@ -400,6 +405,7 @@ class galaxy_trees:
         N_mergers : int
             Number of mergers
         """
+        #!BUG: The `Age` parameter is no longer included in emerge outputs, update to use scale factor.
         mb = self.main_branch(igal)
         progs = self.main_branch_progenitors(igal, **kwargs)
         sats = progs.loc[progs['MMP'] == 0]
@@ -507,6 +513,7 @@ class galaxy_trees:
 
         # TODO: expand this docstring and add examples.
         """
+        #!BUG: The `Age` parameter is no longer included in emerge outputs, update to use scale factor.
         # First clean up kwargs, replace aliases
         keys = list(kwargs.keys())
         for i, kw in enumerate(keys):
@@ -566,14 +573,14 @@ class galaxy_trees:
         # Create masks for derived quantities such as `color`.
         if 'color' in kwargs.keys():
             if kwargs['color'].lower() == 'blue':
-                mask = mask & ((np.log10(galaxy_list['SFR']) - galaxy_list['Stellar_mass']) >= np.log10(0.3 / galaxy_list['Age'] / self.UnitTime_in_yr))
+                mask = mask & ((np.log10(galaxy_list['SFR']) - galaxy_list['Stellar_mass']) >= np.log10(0.3 / self.__age(galaxy_list['Scale'].values) / self.UnitTime_in_yr))
             elif kwargs['color'].lower() == 'red':
-                mask = mask & ((np.log10(galaxy_list['SFR']) - galaxy_list['Stellar_mass']) < np.log10(0.3 / galaxy_list['Age'] / self.UnitTime_in_yr))
+                mask = mask & ((np.log10(galaxy_list['SFR']) - galaxy_list['Stellar_mass']) < np.log10(0.3 / self.__age(galaxy_list['Scale'].values) / self.UnitTime_in_yr))
         if 'color_obs' in kwargs.keys():
             if kwargs['color_obs'].lower() == 'blue':
-                mask = mask & ((np.log10(galaxy_list['SFR_obs']) - galaxy_list['Stellar_mass_obs']) >= np.log10(0.3 / galaxy_list['Age'] / self.UnitTime_in_yr))
+                mask = mask & ((np.log10(galaxy_list['SFR_obs']) - galaxy_list['Stellar_mass_obs']) >= np.log10(0.3 / self.__age(galaxy_list['Scale'].values) / self.UnitTime_in_yr))
             elif kwargs['color_obs'].lower() == 'red':
-                mask = mask & ((np.log10(galaxy_list['SFR_obs']) - galaxy_list['Stellar_mass_obs']) < np.log10(0.3 / galaxy_list['Age'] / self.UnitTime_in_yr))
+                mask = mask & ((np.log10(galaxy_list['SFR_obs']) - galaxy_list['Stellar_mass_obs']) < np.log10(0.3 / self.__age(galaxy_list['Scale'].values) / self.UnitTime_in_yr))
 
         if mask_only:
             return mask
@@ -858,6 +865,7 @@ class galaxy_trees:
             The cosmic time when the two input galaxies finally merge. Returns 0 if the galaxies dont ever merge.
 
         """
+        #!BUG: The `Age` parameter is no longer included in emerge outputs, update to use scale factor.
         if self.__leaf:
             # First we check if these two are in the same tree
             __roots = self.trees.loc[self.__roots_mask].index.values

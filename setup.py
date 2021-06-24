@@ -17,8 +17,10 @@ setup(name='galaxybox',
       install_requires=[
             'astropy',
             'h5py',
+            'matplotlib',
             'numpy',
             'pandas',
             'scipy>=1.4.0',
+            'shapely',
             'tqdm'],
       zip_safe=False)

@@ -294,7 +294,10 @@ class Universe:
     def add_galaxy_trees(self, **kwargs):
         """Add the forest class as a Universe attribute."""
         if self.sim_type == 'EMERGE':
-            self.galaxy = em.galaxy_trees.from_universe(self, **kwargs)
+            if hasattr(self, 'galaxy'):
+                self.galaxy_trees = em.galaxy_trees.from_universe(self, **kwargs)
+            else:
+                self.galaxy = em.galaxy_trees.from_universe(self, **kwargs)
         else:
             print('The galaxy_trees class is not available for simulation type ' + self.sim_type + '.')
 
@@ -302,7 +305,10 @@ class Universe:
         """Add the galaxies class as a Universe attribute."""
         if self.sim_type == 'EMERGE':
             print('Loading galaxy lists:')
-            self.galaxy = em.galaxy_catalog.from_universe(self)
+            if hasattr(self, 'galaxy'):
+                self.galaxy_catalog = em.galaxy_catalog.from_universe(self)
+            else:
+                self.galaxy = em.galaxy_catalog.from_universe(self)
         else:
             print('The galaxy class is not available for simulation type ' + self.sim_type + '.')
 

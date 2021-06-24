@@ -47,7 +47,7 @@ class galaxy_trees:
         frames = [None] * len(self.trees_used)
         for i, file in enumerate(tqdm(self.trees_used, desc='Loading galaxy trees')):
             frames[i] = read_outputs(file, fields_out=fields_out, key='MergerTree/Galaxy')
-        forest = pd.concat(frames)
+        forest = pd.concat(frames, copy=False)
 
         forest.set_index('ID', drop=True, inplace=True)
         self.trees = forest
@@ -461,35 +461,38 @@ class galaxy_trees:
         str
             The proper column name for the input alias
         """
-        # first lets make all columns case insensitive
-        colnames = list(self.trees.keys())
+        #TODO: break this out into stand alone function to share with other classes
         col_alias = {}
-        for k in colnames:
-            col_alias[k] = [k.lower()]
-
-        # add other aliases.
-        col_alias['Scale'] += ['a', 'scale_factor']
-        col_alias['redshift'] = ['redshift', 'z']
-        col_alias['snapshot'] = ['snapshot', 'snapnum', 'snap']
-        col_alias['color'] = ['color']
-        col_alias['color_obs'] = ['color_obs', 'col_obs', 'color_observed']
-        col_alias['Stellar_mass'] += ['mass', 'mstar']
-        col_alias['Halo_mass'] += ['mvir']
-        col_alias['Type'] += ['gtype']
-        col_alias['Up_ID'] += ['ihost', 'host_id', 'id_host']
-        col_alias['Desc_ID'] += ['idesc', 'id_desc']
-        col_alias['Main_ID'] += ['imain', 'id_main']
-        col_alias['MMP_ID'] += ['immp', 'id_mmp']
-        col_alias['Coprog_ID'] += ['icoprog', 'id_coprog']
-        col_alias['Leaf_ID'] += ['ileaf', 'id_leaf']
-        col_alias['Original_ID'] += ['ogid', 'rockstar_id', 'id_rockstar', 'id_original', 'rs_id', 'id_rs', 'irs', 'rsid']
-        col_alias['Num_prog'] += ['np']
-        if 'Intra_cluster_mass' in colnames: col_alias['Intra_cluster_mass'] += ['icm']
-        col_alias['Stellar_mass_root'] += ['mstar_root', 'root_mstar', 'rootmass', 'root_mass']
-        col_alias['Stellar_mass_obs'] += ['mstar_obs']
-        col_alias['Halo_radius'] += ['rvir', 'virial_radius', 'radius']
+        # set some standard aliases
+        col_alias['Scale']              = ['a', 'scale_factor']
+        col_alias['redshift']           = ['redshift', 'z']
+        col_alias['snapshot']           = ['snapshot', 'snapnum', 'snap']
+        col_alias['color']              = ['color']
+        col_alias['color_obs']          = ['color_obs', 'col_obs', 'color_observed']
+        col_alias['Stellar_mass']       = ['mass', 'mstar']
+        col_alias['Halo_mass']          = ['mvir']
+        col_alias['Type']               = ['gtype']
+        col_alias['Up_ID']              = ['ihost', 'host_id', 'id_host']
+        col_alias['Desc_ID']            = ['idesc', 'id_desc']
+        col_alias['Main_ID']            = ['imain', 'id_main']
+        col_alias['MMP_ID']             = ['immp', 'id_mmp']
+        col_alias['Coprog_ID']          = ['icoprog', 'id_coprog']
+        col_alias['Leaf_ID']            = ['ileaf', 'id_leaf']
+        col_alias['Original_ID']        = ['ogid', 'rockstar_id', 'id_rockstar', 'id_original', 'rs_id', 'id_rs', 'irs', 'rsid']
+        col_alias['Num_prog']           = ['np']
+        col_alias['Intra_cluster_mass'] = ['icm']
+        col_alias['Stellar_mass_root']  = ['mstar_root', 'root_mstar', 'rootmass', 'root_mass']
+        col_alias['Stellar_mass_obs']   = ['mstar_obs']
+        col_alias['Halo_radius']        = ['rvir', 'virial_radius', 'radius']
+        
+        # for any non standard columns we set the key value to empty list
+        new = np.setdiff1d(list(self.trees.keys()), list(col_alias.keys()))
+        for k in new:
+            col_alias[k] = []
 
         for k in col_alias.keys():
+            # make case insensitive aliasing
+            col_alias[k] += [k.lower()]
             if key.lower() in col_alias[k]:
                 return k
         raise KeyError('`{}` has no known alias.'.format(key))

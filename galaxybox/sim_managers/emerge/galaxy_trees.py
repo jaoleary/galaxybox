@@ -1053,3 +1053,55 @@ class galaxy_trees:
             raise NotImplementedError('Interpolated growth between timesteps not yet available')
         
         return scale
+
+    def evolution(self, igal, statistic=None, param = 'Stellar_mass'):
+        """ Return the time evolution of some galaxy parameter
+
+        Parameters
+        ----------
+        igal : int or list of ints
+            The ID of the galaxy in the tree.
+        statistic : str, optional
+            The group statistic that should be computed at each timestep, by default None
+        param : str, optional
+            The galaxy paramter that should be tracked, by default 'Stellar_mass'
+
+        Returns
+        -------
+        data : numpy ndarray
+            Individual parameter evolution for each input galaxy. Statistical evolution returned
+            if statistic is not `None`.
+        """
+        #TODO: Allow for multiple paramters to be tracked at once. 
+
+        # allow aliasing.
+        param = self.alias(param)
+        
+        # grab starting properties of input galaxies
+        glist = self.trees.loc[igal]
+        data = np.zeros((len(glist),len(self.scales)))
+        data[:,0] = glist[param].values
+
+
+        progid = glist['MMP_ID'].values.astype(int)
+        prog_mask = progid > 0
+
+        # iterate over each timestep
+        for i in range(1,data.shape[1]):
+            if prog_mask.sum() == 0: break
+            
+            glist = self.trees.loc[progid[prog_mask]]
+            data[prog_mask, i] = glist[param].values
+            igal[prog_mask] = glist.index.values
+
+            # otherwise update progs and move on
+            progid[prog_mask] = glist['MMP_ID'].values.astype(int)
+            prog_mask = progid > 0
+            
+        if statistic is not None:
+            stat = np.zeros(len(self.scales))
+            for i, col in enumerate(data.T):
+                stat[i] = getattr(np, statistic)(col[col>0], axis=0)
+            return stat
+
+        return data

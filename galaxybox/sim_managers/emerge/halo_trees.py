@@ -105,11 +105,11 @@ class halo_trees:
         add = {'out_dir': Universe.out_dir,
                'fig_dir': Universe.fig_dir,
                'TreefileName': Universe.TreefileName,
-               'ModelName': Universe.ModelName,
-               'BoxSize': Universe.BoxSize,
-               'UnitTime_in_yr': Universe.UnitTime_in_yr,
-               'UnitMass_in_Msun': Universe.UnitMass_in_Msun,
-               'UnitLength_in_Mpc': Universe.UnitLength_in_Mpc,
+               'ModelName': Universe.params.get_param('ModelName'),
+               'BoxSize': Universe.params.get_param('BoxSize'),
+               'UnitTime_in_yr': Universe.params.get_param('UnitTime_in_yr'),
+               'UnitMass_in_Msun': Universe.params.get_param('UnitMass_in_Msun'),
+               'UnitLength_in_Mpc': Universe.params.get_param('UnitLength_in_Mpc'),
                'cosmology': Universe.cosmology}
         trees_path = [name for name in glob.glob(Universe.TreefileName + '.*')]
         for i, f in enumerate(trees_path):

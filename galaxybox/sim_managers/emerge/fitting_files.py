@@ -171,6 +171,28 @@ class mcmc(fit):
         """See `_best` in parent class
         """    
         return super()._best(super().data(), **kwargs)
+
+    def information_criterion(self, N=316, method='Bayes',**kwargs):
+        method = method.lower()
+
+        chi2 = -2*super().data(**kwargs).lnprob
+        k = len(super().free_params())
+
+        if 'akaike' in method:
+            AIC = chi2 + 2*k
+            if 'corrected' in method:
+                AIC = AIC + 2*k*(k+1)/(N-k-1)
+            return AIC 
+        elif method == 'bayes':
+            BIC = chi2.min() + k*np.log(N)
+            return BIC
+        elif method == 'deviance':
+            pd = chi2.mean() - chi2.min()
+            DIC = chi2.min() - 2*pd
+            return DIC
+        else: 
+            raise KeyError('{} is not a recognized information criterion method'.format(method))
+
         
 class hybrid(fit):
     def __init__(self, filepath):

@@ -339,10 +339,10 @@ class Universe:
                 try:
                     add = {'out_dir': self.out_dir,
                            'fig_dir': self.fig_dir,
-                           'ModelName': self.ModelName,
-                           'BoxSize': self.BoxSize,
-                           'UnitTime_in_yr': self.UnitTime_in_yr,
-                           'OutputMassThreshold': self.OutputMassThreshold,
+                           'ModelName': self.params.get_param('ModelName'),
+                           'BoxSize': self.params.get_param('BoxSize'),
+                           'UnitTime_in_yr': self.params.get_param('UnitTime_in_yr'),
+                           'OutputMassThreshold': self.params.get_param('OutputMassThreshold'),
                            'cosmology': self.cosmology}
                     mergers = em.galaxy_mergers.from_file(os.path.join(self.out_dir, 'mergers.h5'), add_attrs=add)
                 except:
@@ -353,10 +353,10 @@ class Universe:
             else:
                 add = {'out_dir': self.out_dir,
                        'fig_dir': self.fig_dir,
-                       'ModelName': self.ModelName,
-                       'BoxSize': self.BoxSize,
-                       'UnitTime_in_yr': self.UnitTime_in_yr,
-                       'OutputMassThreshold': self.OutputMassThreshold,
+                       'ModelName': self.params.get_param('ModelName'),
+                       'BoxSize': self.params.get_param('BoxSize'),
+                       'UnitTime_in_yr': self.params.get_param('UnitTime_in_yr'),
+                       'OutputMassThreshold': self.params.get_param('OutputMassThreshold'),
                        'cosmology': self.cosmology}
                 mergers = em.galaxy_mergers.from_file(source, add_attrs=add)
 
@@ -400,9 +400,9 @@ class Universe:
                 try:
                     add = {'out_dir': self.out_dir,
                            'fig_dir': self.fig_dir,
-                           'ModelName': self.ModelName,
-                           'BoxSize': self.BoxSize,
-                           'UnitTime_in_yr': self.UnitTime_in_yr,
+                           'ModelName': self.params.get_param('ModelName'),
+                           'BoxSize': self.params.get_param('BoxSize'),
+                           'UnitTime_in_yr': self.params.get_param('UnitTime_in_yr'),
                            'cosmology': self.cosmology}
                     mergers = em.halo_mergers.from_file(os.path.join(self.out_dir, 'halo_mergers.h5'), add_attrs=add)
                 except:
@@ -413,9 +413,9 @@ class Universe:
             else:
                 add = {'out_dir': self.out_dir,
                        'fig_dir': self.fig_dir,
-                       'ModelName': self.ModelName,
-                       'BoxSize': self.BoxSize,
-                       'UnitTime_in_yr': self.UnitTime_in_yr,
+                       'ModelName': self.params.get_param('ModelName'),
+                       'BoxSize': self.params.get_param('BoxSize'),
+                       'UnitTime_in_yr': self.params.get_param('UnitTime_in_yr'),
                        'cosmology': self.cosmology}
                 mergers = em.halo_mergers.from_file(source, add_attrs=add)
 
@@ -430,9 +430,9 @@ class Universe:
         """Add a galaxy survey to the universe."""
         add = {'out_dir': self.out_dir,
             'fig_dir': self.fig_dir,
-            'ModelName': self.ModelName,
-            'BoxSize': self.BoxSize,
-            'UnitTime_in_yr': self.UnitTime_in_yr,
+            'ModelName': self.params.get_param('ModelName'),
+            'BoxSize': self.params.get_param('BoxSize'),
+            'UnitTime_in_yr': self.params.get_param('UnitTime_in_yr'),
             'cosmology': self.cosmology}
 
         survey = em.survey(file_path = os.path.join(self.out_dir,'survey.h5'), add_attrs=add)

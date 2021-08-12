@@ -33,26 +33,32 @@ class galaxy_catalog:
 
         self.galaxies_used = list(np.atleast_1d(galaxies_path))
 
-        columns = ['file', 's_key', 'snap_num', 'redshift', 'scale']
-        temp = pd.DataFrame(columns=columns)
+        self.snapshots, scalefactor, self.redshifts = [], [], []
+
+        # get snapshot number and redshift for each file.
+        for i, fp in enumerate(galaxies_path):
+            fbase = fp.split('.')[0]
+            self.snapshots += [fp.split('.')[1]]
+            with h5py.File(fp, 'r') as f:
+                scalefactor += [f['Galaxies'].attrs['Scale Factor']]
+                Nfiles = f.attrs['NFiles']
+
+        scalefactor = np.unique(scalefactor)[::-1]
+        self.redshifts = 1/scalefactor - 1
+        self.snapshots = np.unique(self.snapshots)[::-1]
+
         self.__galaxies = {}
-        temp['file'] = self.galaxies_used
-        temp['s_key'] = [f.split('.')[1] for f in self.galaxies_used]
-        temp['snap_num'] = [np.int(f.split('.')[1].strip('S')) for f in self.galaxies_used]
-        temp.sort_values(by='snap_num', inplace=True)
-        #temp['redshift'] = self.OutputRedshifts[::-1]
-        #temp['scale'] = 1 / (temp['redshift'] + 1)
-        redshift = []
-        #self.redshifts = self.OutputRedshifts[::-1]
-        self.snapshots = temp['s_key'].unique()
-        for i, row in temp.iterrows():
-            print(row['file'])
-            self.__galaxies[row['s_key']] = read_outputs(row['file'], key='Galaxies')
-            # rename 'Halo_ID' to 'ID' for compatability with older catalog formats
-            if 'Halo_ID' in self.__galaxies[row['s_key']].keys(): self.__galaxies[row['s_key']].rename(columns={"Halo_ID": "ID"}, inplace=True)
-            self.__galaxies[row['s_key']].set_index('ID', drop=True, inplace=True)
-            redshift += [1/h5py.File(row['file'], 'r')['Galaxies'].attrs['Scale Factor']-1]
-        self.redshifts = np.array(redshift)
+        for i, skey in enumerate(self.snapshots):
+            #skey = 'S{:d}'.format(s)
+            self.__galaxies[skey] = {}
+            self.__galaxies[skey]['redshift'] = self.redshifts[i]
+            if Nfiles > 1:
+                self.__galaxies[skey]['data'] = pd.concat([read_outputs('.'.join([fbase,skey,'{:d}'.format(j),'h5']), key='Galaxies') for j in range(Nfiles)], copy=False)
+            else:
+                self.__galaxies[skey]['data'] = pd.concat([read_outputs('.'.join([fbase,skey,'{:d}'.format(j),'h5']), key='Galaxies') for j in range(Nfiles)], copy=False)
+            if 'Halo_ID' in self.__galaxies[skey]['data'].keys(): self.__galaxies[skey]['data'].rename(columns={"Halo_ID": "ID"}, inplace=True)
+            self.__galaxies[skey]['data'].set_index('ID', drop=True, inplace=True)
+        
 
     @classmethod
     def from_universe(cls, Universe, galaxies_path=None):
@@ -97,7 +103,8 @@ class galaxy_catalog:
             The proper column name for the input alias
         """
         # first lets make all columns case insensitive
-        colnames = list(self.__galaxies[self.snapshots[-1]].keys())
+        s = [*self.__galaxies.keys()][0]
+        colnames = list(self.__galaxies[s]['data'].keys())
         col_alias = {}
         for k in colnames:
             col_alias[k] = [k.lower()]
@@ -153,28 +160,26 @@ class galaxy_catalog:
             # I dont like the implementation of `all` right now.
             # Allowing for specified ranges would be better.
             if 'snapshot' in kwargs.keys():
-                if kwargs['snapshot'] == 'all':
-                    s_key = kwargs['snapshot']
-                    redshift = self.redshifts[s_key]
-                    galaxy_list = self.__galaxies[s_key]
+                redshift = self.__galaxies[kwargs['snapshot']]['redshift']
+                galaxy_list = self.__galaxies[kwargs['snapshot']]['data']
                 kwargs.pop('snapshot')
-            elif 'Scale' in kwargs:
-                redshift = 1 / kwargs['snapshot'] - 1
+            elif 'scale' in kwargs:
+                redshift = 1 / kwargs['scale'] - 1
                 redshift_arg = (np.abs(self.redshifts - redshift)).argmin()
                 s_key = self.snapshots[redshift_arg]
-                redshift = self.redshifts[redshift_arg]
-                galaxy_list = self.__galaxies[s_key]
+                redshift = self.__galaxies[s_key]['redshift']
+                galaxy_list = self.__galaxies[s_key]['data']
                 kwargs.pop('Scale')
             elif 'redshift' in kwargs:
                 redshift_arg = (np.abs(self.redshifts - kwargs['redshift'])).argmin()
                 s_key = self.snapshots[redshift_arg]
-                redshift = self.redshifts[redshift_arg]
-                galaxy_list = self.__galaxies[s_key]
+                redshift = self.__galaxies[s_key]['redshift']
+                galaxy_list = self.__galaxies[s_key]['data']
                 kwargs.pop('redshift')
             else:
-                s_key = self.snapshots[-1]
-                redshift = self.redshifts[-1]
-                galaxy_list = self.__galaxies[s_key]
+                s_key = self.snapshots[0]
+                redshift = self.__galaxies[s_key]['redshift']
+                galaxy_list = self.__galaxies[s_key]['data']
 
             #print('Using snapshot {} at z={:.3f}'.format(s_key, redshift))
             # Setup a default `True` mask

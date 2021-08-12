@@ -458,6 +458,12 @@ class Universe:
         if len(files)>0:
             fit['mcmc'] = em.mcmc(files)
 
+        files = []
+        for name in glob.glob(self.out_dir+'/hybrid*'):
+            files.append(name)
+        if len(files)>0:
+            fit['hybrid'] = em.mcmc(files)
+
         # link the fits to the parameter file, needs this for the fit class to update the file
         for k in fit.keys():
             setattr(fit[k], '_params', self.params)

@@ -14,6 +14,7 @@ setup(name='galaxybox',
       url = 'https://github.com/jaoleary/galaxybox',
       packages=find_packages(include = ['galaxybox', 'galaxybox.*']),
       include_package_data=True,
+      python_requires='>=3.7',
       install_requires=[
             'astropy',
             'halotools',

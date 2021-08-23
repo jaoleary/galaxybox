@@ -38,14 +38,20 @@ class galaxy_catalog:
         # get snapshot number and redshift for each file.
         for i, fp in enumerate(galaxies_path):
             fbase = fp.split('.')[0]
-            self.snapshots += [fp.split('.')[1]]
+            self.snapshots += [int(fp.split('.')[1].strip('S'))]
             with h5py.File(fp, 'r') as f:
                 scalefactor += [f['Galaxies'].attrs['Scale Factor']]
-                Nfiles = f.attrs['NFiles']
+                if 'Nfiles' in f.attrs.keys():
+                    Nfiles = f.attrs['NFiles']
+                else:
+                    Nfiles = 1
+        if hasattr(self, 'NumOutputFiles'): Nfiles = self.NumOutputFiles
+        
+        scalefactor = np.sort(np.unique(scalefactor))[::-1]
 
-        scalefactor = np.unique(scalefactor)[::-1]
         self.redshifts = 1/scalefactor - 1
-        self.snapshots = np.unique(self.snapshots)[::-1]
+        self.snapshots = np.sort(np.unique(self.snapshots))[::-1]
+        self.snapshots = ['S{:d}'.format(s) for s in self.snapshots]
 
         self.__galaxies = {}
         for i, skey in enumerate(self.snapshots):
@@ -55,7 +61,7 @@ class galaxy_catalog:
             if Nfiles > 1:
                 self.__galaxies[skey]['data'] = pd.concat([read_outputs('.'.join([fbase,skey,'{:d}'.format(j),'h5']), key='Galaxies') for j in range(Nfiles)], copy=False)
             else:
-                self.__galaxies[skey]['data'] = pd.concat([read_outputs('.'.join([fbase,skey,'{:d}'.format(j),'h5']), key='Galaxies') for j in range(Nfiles)], copy=False)
+                self.__galaxies[skey]['data'] = read_outputs('.'.join([fbase,skey,'h5']), key='Galaxies')
             if 'Halo_ID' in self.__galaxies[skey]['data'].keys(): self.__galaxies[skey]['data'].rename(columns={"Halo_ID": "ID"}, inplace=True)
             self.__galaxies[skey]['data'].set_index('ID', drop=True, inplace=True)
         
@@ -81,8 +87,8 @@ class galaxy_catalog:
                 return True
 
         if galaxies_path is None:
-            galaxies_path = [name for name in glob.glob(os.path.join(Universe.out_dir, 'galaxies/galaxies.*' + '.h5'))]
-            galaxies_path.sort(reverse=True, key=lambda x: int(x.split('.')[-2].strip('S')))
+            galaxies_path = [name for name in glob.glob(os.path.join(Universe.out_dir,'galaxies/galaxies.*.h5'))]
+            #galaxies_path.sort(reverse=True, key=lambda x: int(x.split('.')[-2].strip('S')))
             
             # only import non-empty files
             galaxies_path = [fp for fp in galaxies_path if not empty(fp)]

@@ -3,6 +3,7 @@ from ...helper_functions import arg_parser
 import numpy as np
 import pandas as pd
 from IPython.display import display, Math
+from scipy.stats import kde
 
 __author__ = ('Joseph O\'Leary', )
 
@@ -11,7 +12,7 @@ class fit:
     alone or within the context of a Universe.
     """
     # all column names that ARENT model parameters
-    _reserved = ['lnprob', 'Temp', 'Scale', 'Frac_accept', 'Step', 'Epoch', 'iwalker']
+    _reserved = ['lnprob', 'Temp', 'Scale', 'Frac_accept', 'Step', 'Epoch', 'iwalker', 'Chi2', 'Mean_chi2', 'p', 'q', 'f', 'g', 'alpha']
     def __init__(self, filepath):
         self.filepath = filepath
         data = []
@@ -33,7 +34,7 @@ class fit:
                 if i == skiprows:
                     return line
     
-    def _best(self, data, percentile=68.0, ipython=False, latex=False):
+    def _best(self, data, percentile=68.0, ipython=False, latex=False, method = 'percentile'):
         """Determine best fit parameter values given a table of mcmc parameters.
 
         Parameters
@@ -56,13 +57,32 @@ class fit:
         """        
         txt=[]
         bf =[]
+        s = '{{{3}}} = {0:.4f}_{{-{1:.4f}}}^{{+{2:.4f}}}'
         for key in data.keys():
             if key not in self._reserved:
-                mcmc = np.percentile(data[key].values, [50-percentile/2, 50, 50+percentile/2])
-                q = np.diff(mcmc)
-                s = '{{{3}}} = {0:.4f}_{{-{1:.4f}}}^{{+{2:.4f}}}'
-                txt += [s.format(mcmc[1], q[0], q[1], self.alias(key))]
-                bf += [[mcmc[1], q[0], q[1]]]
+                if method == 'percentile':
+                    mcmc = np.percentile(data[key].values, [50-percentile/2, 50, 50+percentile/2])
+                    q = np.diff(mcmc)
+                    txt += [s.format(mcmc[1], q[0], q[1], self.alias(key))]
+                    bf += [[mcmc[1], q[0], q[1]]]
+                
+                elif method == 'kde_peak':
+                    dmin, dmax = data[key].values.min(), data[key].values.max()
+                    k = kde.gaussian_kde(data[key].values)
+                    x = np.linspace(dmin,dmax,1000)
+                    y = k.evaluate(x)
+
+                    peak = np.argmax(y)
+                    n=0
+                    mask = y > y[peak]*(0.95-n*0.01) # this is a super janky approach
+                    while k.integrate_box_1d(x[mask][0], x[mask][-1]) < percentile/100:
+                        n+=1
+                        mask = y > y[peak]*(0.98-n*0.01)
+                    
+                    q = np.abs(x[mask][[0,-1]] - x[peak])
+                    txt += [s.format(x[peak], q[0], q[1], self.alias(key))]
+                    bf += [[x[peak], q[0], q[1]]]
+ 
         if ipython:
             display(Math(',\;'.join(txt)))
         if latex:
@@ -169,8 +189,9 @@ class mcmc(fit):
     
     def best(self,**kwargs):
         """See `_best` in parent class
-        """    
-        return super()._best(super().data(), **kwargs)
+        """
+        best_kwargs, kwargs = arg_parser(super()._best, drop=True, **kwargs)    
+        return super()._best(super().data(**kwargs), **best_kwargs)
 
     def information_criterion(self, N=316, method='Bayes',**kwargs):
         method = method.lower()

@@ -3,7 +3,7 @@ import numpy as np
 import copy
 from astropy import cosmology as apcos
 
-__author__ = ('Joseph O\'Leary', )
+__author__ = ("Joseph O'Leary",)
 
 
 class params:
@@ -15,20 +15,22 @@ class params:
         self.__desc_indent = 49
         self.load_params(filepath)
         self.__bkp = copy.deepcopy(self.__blocks)
-    
-        self.cosmology = apcos.LambdaCDM(H0=self.get_param('HubbleParam') * 100,
-                                        Om0=self.get_param('Omega0'),
-                                        Ode0=self.get_param('OmegaLambda'),
-                                        Ob0=self.get_param('OmegaBaryon')) 
-    
+
+        self.cosmology = apcos.LambdaCDM(
+            H0=self.get_param("HubbleParam") * 100,
+            Om0=self.get_param("Omega0"),
+            Ode0=self.get_param("OmegaLambda"),
+            Ob0=self.get_param("OmegaBaryon"),
+        )
+
     def __repr__(self):
         """Report current parameter file setup."""
-        str = ''
+        str = ""
         str += self.header()
         for blk in self.__blocks:
-            str += self.blkheader(name=blk)  + '\n'
+            str += self.blkheader(name=blk) + "\n"
             for opt in self.__blocks[blk]:
-                str += self.optwrite(block=blk, option=opt)  + '\n'
+                str += self.optwrite(block=blk, option=opt) + "\n"
         return str
 
     def load_params(self, filepath):
@@ -43,40 +45,40 @@ class params:
         self.__blocks = {}
         with open(filepath) as fp:
             for line in fp:
-                line = line.strip('\n')
-                if (line.startswith('%') and line.endswith('%')) or (not line.strip()):
+                line = line.strip("\n")
+                if (line.startswith("%") and line.endswith("%")) or (not line.strip()):
                     continue
-                if line.startswith('% '):
-                    blkkey = line.strip('%').strip()
+                if line.startswith("% "):
+                    blkkey = line.strip("%").strip()
                     self.__blocks[blkkey] = {}
                 else:
-                    if line.startswith('%'):
+                    if line.startswith("%"):
                         enable = False
                         line = line[1:]
                     else:
                         enable = True
 
-                    line = line.split('%')
+                    line = line.split("%")
                     if len(line) > 1:
                         description = line[1][1:]
                         del line[-1]
                     line = line[0].split()
                     name = line[0]
                     value = line[1]
-                    if (value[0].isdigit()) and (name is not 'ModelName'):
+                    if (value[0].isdigit()) and (name is not "ModelName"):
                         # this must be numeric
                         if value.isdigit():
                             # if its a digit it must be int
                             value = np.int(value)
                         else:
-                            value = np.fromstring(value, sep=',')
+                            value = np.fromstring(value, sep=",")
                             if len(value) == 1:
                                 value = value[0]
 
                     self.__blocks[blkkey][name] = {}
-                    self.__blocks[blkkey][name]['enable'] = enable
-                    self.__blocks[blkkey][name]['value'] = value
-                    self.__blocks[blkkey][name]['description'] = description
+                    self.__blocks[blkkey][name]["enable"] = enable
+                    self.__blocks[blkkey][name]["value"] = value
+                    self.__blocks[blkkey][name]["description"] = description
 
     def write(self, file_path):
         """Write the current parameter configuration to a file.
@@ -87,13 +89,13 @@ class params:
             The path of the ouput parameter file.
 
         """
-        fp = open(file_path, 'w')
+        fp = open(file_path, "w")
         fp.write(self.header())
         for blk in self.__blocks:
-            fp.write('\n' + self.blkheader(name=blk))
+            fp.write("\n" + self.blkheader(name=blk))
             for opt in self.__blocks[blk]:
-                fp.write('\n' + self.optwrite(block=blk, option=opt))
-        fp.write('\n')
+                fp.write("\n" + self.optwrite(block=blk, option=opt))
+        fp.write("\n")
         fp.close()
 
     def reset(self):
@@ -115,9 +117,9 @@ class params:
             a blank space of size `length`.
 
         """
-        return ' ' * length
+        return " " * length
 
-    def cmtln(self, length=1, char='%'):
+    def cmtln(self, length=1, char="%"):
         """Create a comment line of variable length.
 
         Parameters
@@ -135,7 +137,7 @@ class params:
         """
         return char * length
 
-    def blkheader(self, name='', mode=None):
+    def blkheader(self, name="", mode=None):
         """Create a formated section header for a parameter file.
 
         Parameters
@@ -149,8 +151,8 @@ class params:
             A formated section header string.
 
         """
-        headerstr = '\n' * 2
-        headerstr += '% ' + name + '\n'
+        headerstr = "\n" * 2
+        headerstr += "% " + name + "\n"
         return headerstr
 
     def header(self):
@@ -163,9 +165,9 @@ class params:
 
         """
         headerstr = self.cmtln(124)
-        headerstr += '\n%' + self.blank(122) + '%'
-        headerstr += '\n% Parameter file for the EMERGE code' + self.blank(87) + '%'
-        headerstr += '\n%' + self.blank(122) + '%\n'
+        headerstr += "\n%" + self.blank(122) + "%"
+        headerstr += "\n% Parameter file for the EMERGE code" + self.blank(87) + "%"
+        headerstr += "\n%" + self.blank(122) + "%\n"
         headerstr += self.cmtln(124)
         return headerstr
 
@@ -185,55 +187,55 @@ class params:
             A formated string for printing a parameter option to single file line
 
         """
-        if self.__blocks[block][option]['enable']:
-            enable = ''
+        if self.__blocks[block][option]["enable"]:
+            enable = ""
         else:
-            enable = '%'
-        value = self.__blocks[block][option]['value']
-        if self.__blocks[block][option]['value'] is None:
-            optstr = ''
+            enable = "%"
+        value = self.__blocks[block][option]["value"]
+        if self.__blocks[block][option]["value"] is None:
+            optstr = ""
         else:
             if isinstance(value, str):
                 optstr = value
             else:
-                if block == 'Units':
+                if block == "Units":
                     tmp = max(np.abs(value), 1 / np.abs(value))
                     if np.abs(tmp) >= 1000:
-                        string = '{:e}'.format(value)
-                        front = string.split('e')[0]
+                        string = "{:e}".format(value)
+                        front = string.split("e")[0]
 
                         if np.abs(np.float(front)) == 1:
-                            front = '{:.1f}'.format(np.float(front))
+                            front = "{:.1f}".format(np.float(front))
                         else:
-                            front = front.strip('0')
+                            front = front.strip("0")
                         front = front.strip()
 
-                        back = string.split('e')[1]
-                        back = '{:d}'.format(np.int(back))
+                        back = string.split("e")[1]
+                        back = "{:d}".format(np.int(back))
                         if np.int(back) == 0:
                             optstr = front
                         else:
-                            optstr = 'e'.join([front, back])
+                            optstr = "e".join([front, back])
                     else:
                         if value % 1 == 0:
-                            optstr = '{:.1f}'.format(value)
+                            optstr = "{:.1f}".format(value)
                         else:
-                            optstr = '{:f}'.format(value)
-                            optstr = optstr.strip('0')
+                            optstr = "{:f}".format(value)
+                            optstr = optstr.strip("0")
                 else:
                     value = np.atleast_1d(value)
-                    optstr = ','.join(map(str, list(value)))
+                    optstr = ",".join(map(str, list(value)))
 
         vspace = self.blank(self.__val_indent - len(enable + option))
         b = self.__desc_indent - len(enable + option + vspace + optstr)
         if b <= 0:
             b = 1
         dspace = self.blank(b)
-        description = '% ' + self.__blocks[block][option]['description']
+        description = "% " + self.__blocks[block][option]["description"]
 
         return enable + option + vspace + optstr + dspace + description
 
-    def optadd(self, block, option, enable=False, value=None, description=' '):
+    def optadd(self, block, option, enable=False, value=None, description=" "):
         """Add a new parameter.
 
         Parameters
@@ -255,12 +257,14 @@ class params:
 
         for k in self.__blocks:
             if option in self.__blocks[k].keys():
-                raise KeyError('Option ' + option + ' already exists. Use `.optupdate()` method.')
+                raise KeyError(
+                    "Option " + option + " already exists. Use `.optupdate()` method."
+                )
 
         self.__blocks[block][option] = {}
-        self.__blocks[block][option]['enable'] = enable
-        self.__blocks[block][option]['value'] = value
-        self.__blocks[block][option]['description'] = description
+        self.__blocks[block][option]["enable"] = enable
+        self.__blocks[block][option]["value"] = value
+        self.__blocks[block][option]["description"] = description
 
     def optupdate(self, option, force=False, **kwargs):
         """Update a parameter file option.
@@ -279,17 +283,17 @@ class params:
         """
         for k in self.__blocks:
             if option in self.__blocks[k].keys():
-                if (option == 'ModelName') and (not force):
-                    raise PermissionError('Changing the model name is generally a bad idea...set `force=True` to override')
+                if (option == "ModelName") and (not force):
+                    raise PermissionError(
+                        "Changing the model name is generally a bad idea...set `force=True` to override"
+                    )
                 for v in kwargs:
                     if v in self.__blocks[k][option].keys():
                         self.__blocks[k][option][v] = kwargs[v]
                     else:
-                        raise KeyError('`{}`'.format(v) + ' is not a valid option key')
+                        raise KeyError("`{}`".format(v) + " is not a valid option key")
 
     def get_param(self, option):
         for b in self.__blocks:
             if option in self.__blocks[b].keys():
-                return self.__blocks[b][option]['value']
-
-        
+                return self.__blocks[b][option]["value"]

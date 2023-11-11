@@ -2,7 +2,7 @@
 import numpy as np
 import copy
 
-__author__ = ('Joseph O\'Leary', )
+__author__ = ("Joseph O'Leary",)
 
 
 class config:
@@ -16,13 +16,13 @@ class config:
 
     def __repr__(self):
         """Report current configuration file setup."""
-        str = ''
+        str = ""
         str += self.header()
         for blk in self.__blocks:
-            str += self.blkheader(name=blk) + '\n'
+            str += self.blkheader(name=blk) + "\n"
             for opt in self.__blocks[blk]:
-                str += self.optwrite(block=blk, option=opt) + '\n'
-        str += '#\n' + self.cmtln(100)
+                str += self.optwrite(block=blk, option=opt) + "\n"
+        str += "#\n" + self.cmtln(100)
         return str
 
     def write(self, file_path):
@@ -34,13 +34,13 @@ class config:
             The path of the ouput configuration file.
 
         """
-        fp = open(file_path, 'w')
+        fp = open(file_path, "w")
         fp.write(self.header())
         for blk in self.__blocks:
-            fp.write('\n' + self.blkheader(name=blk))
+            fp.write("\n" + self.blkheader(name=blk))
             for opt in self.__blocks[blk]:
-                fp.write('\n' + self.optwrite(block=blk, option=opt))
-        fp.write('\n#\n' + self.cmtln(100))
+                fp.write("\n" + self.optwrite(block=blk, option=opt))
+        fp.write("\n#\n" + self.cmtln(100))
         fp.close()
 
     def write_compiled(self, file_path):
@@ -52,16 +52,16 @@ class config:
             Output file path.
 
         """
-        fp = open(file_path, 'w')
-        fp.write('#compiled config created but `galaxybox`.\n')
+        fp = open(file_path, "w")
+        fp.write("#compiled config created but `galaxybox`.\n")
         for blk in self.__blocks:
             for opt in self.__blocks[blk]:
-                if self.__blocks[blk][opt]['enable']:
-                    if self.__blocks[blk][opt]['value'] is not None:
-                        line = opt + '={}'.format(self.__blocks[blk][opt]['value'])
+                if self.__blocks[blk][opt]["enable"]:
+                    if self.__blocks[blk][opt]["value"] is not None:
+                        line = opt + "={}".format(self.__blocks[blk][opt]["value"])
                     else:
                         line = opt
-                    fp.write(line + '\n')
+                    fp.write(line + "\n")
         fp.close()
 
     def blank(self, length=1):
@@ -78,9 +78,9 @@ class config:
             a blank space of size `length`.
 
         """
-        return ' ' * length
+        return " " * length
 
-    def cmtln(self, length=1, char='#'):
+    def cmtln(self, length=1, char="#"):
         """Create a comment line of variable length.
 
         Parameters
@@ -98,7 +98,7 @@ class config:
         """
         return char * length
 
-    def blkheader(self, name='', mode=None):
+    def blkheader(self, name="", mode=None):
         """Create a formated section header for a configuration file.
 
         Parameters
@@ -113,10 +113,10 @@ class config:
             A formated section header string.
 
         """
-        headerstr = '#\n'
-        headerstr += '# ' + self.cmtln(length=98, char='-') + '\n'
-        headerstr += '#' + self.blank(self.__indent - 1) + name + '\n'
-        headerstr += '# ' + self.cmtln(length=98, char='-')
+        headerstr = "#\n"
+        headerstr += "# " + self.cmtln(length=98, char="-") + "\n"
+        headerstr += "#" + self.blank(self.__indent - 1) + name + "\n"
+        headerstr += "# " + self.cmtln(length=98, char="-")
         return headerstr
 
     def header(self):
@@ -129,12 +129,16 @@ class config:
 
         """
         headerstr = self.cmtln(100)
-        headerstr += '\n#!/bin/bash'
+        headerstr += "\n#!/bin/bash"
         headerstr += self.blank(12)
-        headerstr += '# this line only there to enable syntax highlighting in this file\n'
-        headerstr += self.cmtln(100) + '\n#' + self.blank(2)
-        headerstr += 'EMERGE Config file - Enable/Disable compile-time options as needed'
-        headerstr += self.blank(30) + '#\n' + self.cmtln(100) + '\n#'
+        headerstr += (
+            "# this line only there to enable syntax highlighting in this file\n"
+        )
+        headerstr += self.cmtln(100) + "\n#" + self.blank(2)
+        headerstr += (
+            "EMERGE Config file - Enable/Disable compile-time options as needed"
+        )
+        headerstr += self.blank(30) + "#\n" + self.cmtln(100) + "\n#"
         return headerstr
 
     def load_config(self, filepath):
@@ -148,23 +152,27 @@ class config:
         """
         self.__blocks = {}
         with open(filepath) as fp:
-            line = fp.readline().strip('\n')
+            line = fp.readline().strip("\n")
 
             while line:
-                if line.startswith('# -'):
-                    line = fp.readline().strip('\n')
-                    blkkey = line.strip('#').strip()
+                if line.startswith("# -"):
+                    line = fp.readline().strip("\n")
+                    blkkey = line.strip("#").strip()
                     self.__blocks[blkkey] = {}
-                    line = fp.readline().strip('\n')
-                if not (line.startswith('# ') or line.startswith('#!') or len(set(line)) == 1):
-                    name = line.split('#')
-                    if name[0] is '':
+                    line = fp.readline().strip("\n")
+                if not (
+                    line.startswith("# ")
+                    or line.startswith("#!")
+                    or len(set(line)) == 1
+                ):
+                    name = line.split("#")
+                    if name[0] is "":
                         name = name[1].strip()
                         enable = False
                     else:
                         name = name[0].strip()
                         enable = True
-                    name = name.split('=')
+                    name = name.split("=")
                     self.__blocks[blkkey][name[0]] = {}
                     if len(name) == 1:
                         value = None
@@ -174,11 +182,13 @@ class config:
                         except:
                             value = np.float(name[1])
 
-                    self.__blocks[blkkey][name[0]]['value'] = value
-                    self.__blocks[blkkey][name[0]]['enable'] = enable
-                    self.__blocks[blkkey][name[0]]['description'] = line.split('#')[-1].strip()
+                    self.__blocks[blkkey][name[0]]["value"] = value
+                    self.__blocks[blkkey][name[0]]["enable"] = enable
+                    self.__blocks[blkkey][name[0]]["description"] = line.split("#")[
+                        -1
+                    ].strip()
 
-                line = fp.readline().strip('\n')
+                line = fp.readline().strip("\n")
 
     def load_compiled_config(self, filepath):
         """Import emerge `compiled_config.txt`.
@@ -190,35 +200,37 @@ class config:
 
         """
 
-        if hasattr(self, '_cmpl_opt'):
+        if hasattr(self, "_cmpl_opt"):
             del self._cmpl_opt
         self._compiled_path = filepath
 
         fp = open(filepath)
-        line = fp.readline().strip('\n')
-        while line.startswith('#'):
-            if not line.startswith('#compiled'):
-                self.build = {} # read in the current build info version, branch, git-hash
-                for b in line.strip('#').split(' - '):
-                    key, value = b.split(': ')
+        line = fp.readline().strip("\n")
+        while line.startswith("#"):
+            if not line.startswith("#compiled"):
+                self.build = (
+                    {}
+                )  # read in the current build info version, branch, git-hash
+                for b in line.strip("#").split(" - "):
+                    key, value = b.split(": ")
                     self.build[key] = value
-            line = fp.readline().strip('\n')
+            line = fp.readline().strip("\n")
         self._cmpl_opt = {}
         while line:
-            line = line.split('=')
+            line = line.split("=")
             opt = line[0]
             self._cmpl_opt[opt] = {}
-            self._cmpl_opt[opt]['enable'] = True
+            self._cmpl_opt[opt]["enable"] = True
 
             if len(line) == 1:
-                self._cmpl_opt[opt]['value'] = None
+                self._cmpl_opt[opt]["value"] = None
             else:
                 try:
-                    self._cmpl_opt[opt]['value'] = np.int(line[1])
+                    self._cmpl_opt[opt]["value"] = np.int(line[1])
                 except:
-                    self._cmpl_opt[opt]['value'] = np.float(line[1])
-                self._cmpl_opt[opt]['value']
-            line = fp.readline().strip('\n')
+                    self._cmpl_opt[opt]["value"] = np.float(line[1])
+                self._cmpl_opt[opt]["value"]
+            line = fp.readline().strip("\n")
 
     def update_from_compiled_config(self, filepath=None):
         """Update current configuration using compiled_config.txt.
@@ -233,12 +245,14 @@ class config:
             self.load_compiled_config(filepath)
         self.set_all(enable=False)
         for opt in self._cmpl_opt:
-            enable = self._cmpl_opt[opt]['enable']
-            value = self._cmpl_opt[opt]['value']
+            enable = self._cmpl_opt[opt]["enable"]
+            value = self._cmpl_opt[opt]["value"]
             try:
                 self.optupdate(option=opt, enable=enable, value=value)
             except:
-                self.optadd(block='OTHER OPTIONS', option=opt, enable=enable, value=value)
+                self.optadd(
+                    block="OTHER OPTIONS", option=opt, enable=enable, value=value
+                )
 
     def reset(self):
         """Reset config class to initial loaded state."""
@@ -264,8 +278,8 @@ class config:
         """
         cfg = cls(template_path)
         cfg.update_from_compiled_config(compiled_path)
-        setattr(cfg, '_template_path', template_path)
-        setattr(cfg, '_compiled_path', compiled_path)
+        setattr(cfg, "_template_path", template_path)
+        setattr(cfg, "_compiled_path", compiled_path)
         return cfg
 
     def optwrite(self, block, option):
@@ -284,21 +298,21 @@ class config:
             A formated string for printing a compile option to single file line
 
         """
-        if self.__blocks[block][option]['enable']:
-            enable = ''
+        if self.__blocks[block][option]["enable"]:
+            enable = ""
         else:
-            enable = '#'
-        if self.__blocks[block][option]['value'] is None:
+            enable = "#"
+        if self.__blocks[block][option]["value"] is None:
             optstr = option
         else:
-            optstr = option + '={}'.format(self.__blocks[block][option]['value'])
+            optstr = option + "={}".format(self.__blocks[block][option]["value"])
 
         space = self.blank(self.__indent - len(enable + optstr))
-        description = '# ' + self.__blocks[block][option]['description']
+        description = "# " + self.__blocks[block][option]["description"]
 
         return enable + optstr + space + description
 
-    def optadd(self, block, option, enable=False, value=None, description=' '):
+    def optadd(self, block, option, enable=False, value=None, description=" "):
         """Add a compile option to the configuration.
 
         Parameters
@@ -320,12 +334,14 @@ class config:
 
         for k in self.__blocks:
             if option in self.__blocks[k].keys():
-                raise KeyError('Option ' + option + ' already exists. Use `.optupdate()` method.')
+                raise KeyError(
+                    "Option " + option + " already exists. Use `.optupdate()` method."
+                )
 
         self.__blocks[block][option] = {}
-        self.__blocks[block][option]['enable'] = enable
-        self.__blocks[block][option]['value'] = value
-        self.__blocks[block][option]['description'] = description
+        self.__blocks[block][option]["enable"] = enable
+        self.__blocks[block][option]["value"] = value
+        self.__blocks[block][option]["description"] = description
 
     def optupdate(self, option, **kwargs):
         """Update a configuration file option.
@@ -348,7 +364,7 @@ class config:
                     if v in self.__blocks[k][option].keys():
                         self.__blocks[k][option][v] = kwargs[v]
                     else:
-                        raise KeyError('`{}`'.format(v) + ' is not a valid option key')
+                        raise KeyError("`{}`".format(v) + " is not a valid option key")
 
     def set_all(self, block=None, enable=True):
         """Enable or disable all config options in block or file.
@@ -365,8 +381,8 @@ class config:
             block = np.atleast_1d(block)
             for blk in block:
                 for opt in self.__blocks[blk]:
-                    self.__blocks[blk][opt]['enable'] = enable
+                    self.__blocks[blk][opt]["enable"] = enable
         else:
             for blk in self.__blocks:
                 for opt in self.__blocks[blk]:
-                    self.__blocks[blk][opt]['enable'] = enable
+                    self.__blocks[blk][opt]["enable"] = enable

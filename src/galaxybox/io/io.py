@@ -1,7 +1,7 @@
 """Module containing general input/output functions."""
 import h5py
 
-__author__ = ('Joseph O\'Leary', )
+__author__ = ("Joseph O'Leary",)
 
 
 def recursive_hdf5(group):

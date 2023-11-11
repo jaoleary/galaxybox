@@ -5,13 +5,19 @@ import astropy.units as apunits
 from shapely.geometry import Polygon
 from scipy.spatial.transform.rotation import Rotation
 import matplotlib.pyplot as plt
-from ..helper_functions import coordinate_plane, poly_traverse, rotate, shuffle_string, translate
+from ..helper_functions import (
+    coordinate_plane,
+    poly_traverse,
+    rotate,
+    shuffle_string,
+    translate,
+)
 from ..plot.plot import Arrow3D, render_cube
 
-__author__ = ('Joseph O\'Leary', )
+__author__ = ("Joseph O'Leary",)
 
-class lightcone():
 
+class lightcone:
     def __init__(self, da, dd, u1, u2, u3, Lbox, full_width=False):
         """Initialize a lightcone object.
 
@@ -30,16 +36,24 @@ class lightcone():
         Lbox : float
             Comoving cosmological box side length.
         full_width : Bool
-            If True, removes angle checks and sets distances only along LoS axis only 
+            If True, removes angle checks and sets distances only along LoS axis only
         """
-        
-        self.da, self.dd, self.u1, self.u2, self.u3, self.Lbox, self.full_width = da, dd, u1, u2, u3, Lbox, full_width
+
+        self.da, self.dd, self.u1, self.u2, self.u3, self.Lbox, self.full_width = (
+            da,
+            dd,
+            u1,
+            u2,
+            u3,
+            Lbox,
+            full_width,
+        )
         if not self.full_width:
             corners = np.array([[-1, -1], [1, -1], [1, 1], [-1, 1]], dtype=float)
             corners[:, 0] = corners[:, 0] * da.value / 2
             corners[:, 1] = corners[:, 1] * dd.value / 2
             self.plane = Polygon(corners)
-            dcm = np.matmul(np.vstack([u1,u2,u3]), np.identity(3))
+            dcm = np.matmul(np.vstack([u1, u2, u3]), np.identity(3))
             self.rotation = Rotation.from_matrix(dcm)
 
         # TODO: I dont like how this sets the initial seed....
@@ -65,7 +79,7 @@ class lightcone():
 
         """
         # create lightcone coordinate vectors
-        u3 = np.array([n, m, m * n]) / np.sqrt(m**2 + n**2 + (m * n)**2)
+        u3 = np.array([n, m, m * n]) / np.sqrt(m**2 + n**2 + (m * n) ** 2)
         # construct univector corresponding to the smaller axis m (x-axis) and n (y-axis).
         if m <= n:
             uax = np.array([1, 0, 0])
@@ -76,7 +90,9 @@ class lightcone():
         u2 = np.cross(u3, u1)
 
         # create line of sight vector
-        LoS = np.array([Lbox / m, Lbox / n, Lbox]) / np.linalg.norm(np.array([Lbox / m, Lbox / n, Lbox]), axis=-1)
+        LoS = np.array([Lbox / m, Lbox / n, Lbox]) / np.linalg.norm(
+            np.array([Lbox / m, Lbox / n, Lbox]), axis=-1
+        )
 
         # light cone angles
         da = Angle(1 / (m * m * n), apunits.radian)
@@ -102,8 +118,8 @@ class lightcone():
         """
         u3 = np.zeros(3)
         u3[los_axis] = 1
-        u1 = np.roll(u3,1)
-        u2 = np.roll(u1,1)
+        u1 = np.roll(u3, 1)
+        u2 = np.roll(u1, 1)
         da = Angle(np.pi, apunits.radian)
         dd = Angle(np.pi, apunits.radian)
         return cls(da, dd, u1, u2, u3, Lbox, full_width=True)
@@ -131,12 +147,12 @@ class lightcone():
         if isinstance(Dec, (float, int, str)):
             Dec = Angle(Dec, apunits.radian)
 
-        n = (RA.value / (Dec.value**2))**(1 / 3)
+        n = (RA.value / (Dec.value**2)) ** (1 / 3)
         m = n * Dec.value / RA.value
-        if (m<1) or (n<1):
+        if (m < 1) or (n < 1):
             raise ValueError("Selected angles are too wide, choose small aperture")
         # create lightcone coordinate vectors
-        u3 = np.array([n, m, m * n]) / np.sqrt(m**2 + n**2 + (m * n)**2)
+        u3 = np.array([n, m, m * n]) / np.sqrt(m**2 + n**2 + (m * n) ** 2)
 
         if m <= n:
             uax = np.array([1, 0, 0])
@@ -147,7 +163,9 @@ class lightcone():
         u2 = np.cross(u3, u1)
 
         # create line of sight vector
-        LoS = np.array([Lbox / m, Lbox / n, Lbox]) / np.linalg.norm(np.array([Lbox / m, Lbox / n, Lbox]), axis=-1)
+        LoS = np.array([Lbox / m, Lbox / n, Lbox]) / np.linalg.norm(
+            np.array([Lbox / m, Lbox / n, Lbox]), axis=-1
+        )
 
         # light cone angles
         da = Angle(1 / (m * m * n), apunits.radian)
@@ -178,13 +196,15 @@ class lightcone():
 
         if self.full_width:
             los_arg = np.argmax(self.u3)
-            mask = (pos[:,los_arg] >= D_min) & (pos[:,los_arg] < D_max)
+            mask = (pos[:, los_arg] >= D_min) & (pos[:, los_arg] < D_max)
         else:
             tan_a = np.inner(pos, self.u1) / np.inner(pos, self.u3)
             tan_d = np.inner(pos, self.u2) / np.inner(pos, self.u3)
             mask_alpha = np.abs(tan_a) <= np.tan(self.da / 2)
             mask_delta = np.abs(tan_d) <= np.tan(self.dd / 2)
-            mask_distance = (np.sqrt(((pos)**2).sum(axis=1)) >= D_min) & (np.sqrt(((pos)**2).sum(axis=1)) < D_max)
+            mask_distance = (np.sqrt(((pos) ** 2).sum(axis=1)) >= D_min) & (
+                np.sqrt(((pos) ** 2).sum(axis=1)) < D_max
+            )
             mask = mask_alpha & mask_delta & mask_distance
 
         if mask_only:
@@ -194,8 +214,8 @@ class lightcone():
 
     def snapshot_extent(self, snapnum):
         """Return minimum and maximum radial extent of a snapshot from observer origin."""
-        if not hasattr(self, 'distance'):
-            raise NameError('  \'distance\' not defined, set using `set_snap_distances`.')
+        if not hasattr(self, "distance"):
+            raise NameError("  'distance' not defined, set using `set_snap_distances`.")
 
         if snapnum == 0:
             min_d = 0
@@ -244,7 +264,9 @@ class lightcone():
 
         """
         pos = np.atleast_2d(pos)
-        return np.array([np.inner(pos, self.u1), np.inner(pos, self.u2), np.inner(pos, self.u3)]).T
+        return np.array(
+            [np.inner(pos, self.u1), np.inner(pos, self.u2), np.inner(pos, self.u3)]
+        ).T
 
     def plane_intersect(self, vertices):
         """Check if a plane in 3D space will intesect a lightcone in projection.
@@ -289,9 +311,9 @@ class lightcone():
         # TODO: This method needs a performance boost
 
         if self.full_width:
-            tess_max = np.ceil(D_max/self.Lbox).astype(int)
-            origins = np.zeros([tess_max,3])
-            origins[:, np.argmax(self.u3)] = np.arange(0,tess_max)*self.Lbox
+            tess_max = np.ceil(D_max / self.Lbox).astype(int)
+            origins = np.zeros([tess_max, 3])
+            origins[:, np.argmax(self.u3)] = np.arange(0, tess_max) * self.Lbox
             mask = origins[:, np.argmax(self.u3)] + self.Lbox >= D_min
             return origins[mask]
 
@@ -304,27 +326,31 @@ class lightcone():
             for j, r2 in enumerate(r):
                 vec = rotate(self.u3, angle=self.dd.value * r1, u=self.u1)
                 vec = rotate(vec, angle=self.da.value * r2, u=self.u2)
-                tess_max = max(tess_max, np.max(np.ceil(vec * D_max / self.Lbox).astype(int)) + 1)
+                tess_max = max(
+                    tess_max, np.max(np.ceil(vec * D_max / self.Lbox).astype(int)) + 1
+                )
 
         origins = np.zeros([tess_max**3, 3])
         mask = np.full(len(origins), False)
 
-        planes = np.array([[0, 1],
-                           [0, 2],
-                           [1, 2]])
+        planes = np.array([[0, 1], [0, 2], [1, 2]])
         c = 0
-        h = np.sqrt(3*self.Lbox**2)
+        h = np.sqrt(3 * self.Lbox**2)
         # This can be reduced to a single for loop and parallelized.
         for i in range(tess_max):
             for j in range(tess_max):
                 for k in range(tess_max):
                     origins[c, :] = [i * self.Lbox, j * self.Lbox, k * self.Lbox]
                     R = np.linalg.norm(origins[c, :])
-                    if (R+h >= D_min) & (R < D_max):
+                    if (R + h >= D_min) & (R < D_max):
                         for t, p in enumerate(planes):
                             # here we check if any plane of the simulation volume intersects with the light cone in projection
                             # this is method is a bit expensive, there are certainly ways to speed this up.
-                            if self.plane_intersect(coordinate_plane(origin=origins[c, :], Lbox=self.Lbox, axes=p)):
+                            if self.plane_intersect(
+                                coordinate_plane(
+                                    origin=origins[c, :], Lbox=self.Lbox, axes=p
+                                )
+                            ):
                                 mask[c] = True
                                 break
                     c += 1
@@ -351,10 +377,10 @@ class lightcone():
 
         Parameters
         ----------
-        distances : 1-D array of length N-snapshots 
+        distances : 1-D array of length N-snapshots
             An ascending array containing the comoving distance to each snapshot based on the snapshot output redshift.
-        """        
-        setattr(self, 'distance', distances)
+        """
+        setattr(self, "distance", distances)
 
     def get_snapshots(self, origin):
         """Detemine which snap should could my applied to a tesselate volume based on its comoving distance from the observer
@@ -368,13 +394,17 @@ class lightcone():
         -------
         snap_arg : 1-D array
             An array with the arguments of applicable snapshots based on the `distances` attribute.
-        """        
+        """
         # get the minimum and maximum extent of a box wrt to the origin
         dmin = np.linalg.norm(origin)
         dmax = np.linalg.norm(origin + self.Lbox)
 
-        snap_max_d = np.concatenate((self.distance[:-1] + np.diff(self.distance)/2, [self.distance[-1]]))
-        snap_min_d = np.concatenate(( [self.distance[0]], self.distance[1:] - np.diff(self.distance)/2))
+        snap_max_d = np.concatenate(
+            (self.distance[:-1] + np.diff(self.distance) / 2, [self.distance[-1]])
+        )
+        snap_min_d = np.concatenate(
+            ([self.distance[0]], self.distance[1:] - np.diff(self.distance) / 2)
+        )
         # which snapshots fall in that distance range.
         far = np.logical_and(snap_max_d >= dmin, snap_max_d < dmax)
         near = np.logical_and(snap_min_d >= dmin, snap_min_d < dmax)
@@ -403,13 +433,13 @@ class lightcone():
         Returns
         -------
         np.ndarray (length, 3)
-            An array of rotation angles of specified length 
+            An array of rotation angles of specified length
         """
-        box_seed = ''.join((box_coord).astype(int).astype(str))
+        box_seed = "".join((box_coord).astype(int).astype(str))
         if self.seed is not None:
             np.random.seed(int(str(self.seed) + box_seed))
-        angle = np.random.choice([0, np.pi / 2, np.pi, 3 * np.pi / 2], (length,3))
-        sequence = np.array([shuffle_string('xyz') for _ in range(length)])
+        angle = np.random.choice([0, np.pi / 2, np.pi, 3 * np.pi / 2], (length, 3))
+        sequence = np.array([shuffle_string("xyz") for _ in range(length)])
         return angle, sequence
 
     def random_translations(self, length=1, box_coord=None):
@@ -423,9 +453,9 @@ class lightcone():
         Returns
         -------
         np.ndarray (length, 3)
-            An array of translations of specified length 
+            An array of translations of specified length
         """
-        box_seed = ''.join((box_coord).astype(int).astype(str))
+        box_seed = "".join((box_coord).astype(int).astype(str))
         if self.seed is not None:
             np.random.seed(int(str(self.seed) + box_seed))
         return np.random.uniform(low=0, high=self.Lbox, size=(length, 3))
@@ -450,25 +480,25 @@ class lightcone():
         """
         pos = np.atleast_2d(pos)
         box_coord = np.atleast_1d(box_coord).astype(int)
-        
+
         # set the new origin for these points
-        new_origin = box_coord*self.Lbox
-        
+        new_origin = box_coord * self.Lbox
+
         # get the randomization parameters for this subbox
         angles, sequences = self.random_angles(box_coord=box_coord)
         translations = self.random_translations(box_coord=box_coord)
 
         if randomize:
             Rot = Rotation.from_euler(seq=sequences[0], angles=angles[0])
-           
+
             # apply coordinate rotation
             pos = Rot.apply(pos)
-            if pos[:,0].min() < 0:
-                pos[:,0]+= self.Lbox
-            if pos[:,1].min() < 0:
-                pos[:,1] += self.Lbox
-            if pos[:,2].min() < 0:
-                pos[:,2] += self.Lbox
+            if pos[:, 0].min() < 0:
+                pos[:, 0] += self.Lbox
+            if pos[:, 1].min() < 0:
+                pos[:, 1] += self.Lbox
+            if pos[:, 2].min() < 0:
+                pos[:, 2] += self.Lbox
 
             # apply translations
             pos = translate(pos, Lbox=self.Lbox, axes=[0, 1, 2], dx=translations[0])
@@ -497,7 +527,7 @@ class lightcone():
         vel = np.atleast_2d(vel)
         box_coord = np.atleast_1d(box_coord).astype(int)
         angles, sequences = self.random_angles(box_coord=box_coord)
-        
+
         Rot = Rotation.from_euler(seq=sequences[0], angles=angles[0])
 
         vel = Rot.apply(vel)
@@ -516,10 +546,18 @@ class lightcone():
         box_coord : np.ndarray (N, 3)
             The sub-box coordinate for each input postion.
         """
-        box_coord = np.floor(pos/self.Lbox).astype(int)
+        box_coord = np.floor(pos / self.Lbox).astype(int)
         return box_coord
 
-    def plot_cone(self, D_min, D_max, equal_aspect=True, LoS=True, Tesselations=True, Cone_edges=False):
+    def plot_cone(
+        self,
+        D_min,
+        D_max,
+        equal_aspect=True,
+        LoS=True,
+        Tesselations=True,
+        Cone_edges=False,
+    ):
         """Visualize lightcone geometry and box tesselations.
 
         Parameters
@@ -530,84 +568,91 @@ class lightcone():
             Maximum comoving distance to place new volumes
         equal_aspect : bool, optional
             Specifies whether plotting axis will have equal lengths, by default True
-        """        
-        #TODO: This method is a complete mess. It works but needs serious cleanup
-        
+        """
+        # TODO: This method is a complete mess. It works but needs serious cleanup
+
         vert = self.tesselate(D_min, D_max)
 
-        fig = plt.figure(figsize=(12,12))
+        fig = plt.figure(figsize=(12, 12))
 
-        ax1 = fig.add_subplot(2,2,1)
-        ax2 = fig.add_subplot(2,2,2, projection='3d')
+        ax1 = fig.add_subplot(2, 2, 1)
+        ax2 = fig.add_subplot(2, 2, 2, projection="3d")
         ax2.grid(False)
-        ax3 = fig.add_subplot(2,2,3)
-        ax4 = fig.add_subplot(2,2,4)
+        ax3 = fig.add_subplot(2, 2, 3)
+        ax4 = fig.add_subplot(2, 2, 4)
 
         if equal_aspect:
-            ax1.set_xlim([vert.min(),vert.max()+self.Lbox])
-            ax1.set_ylim([vert.min(),vert.max()+self.Lbox])
-            ax2.set_zlim3d(vert.min(),vert.max()+self.Lbox)
-            ax2.set_ylim3d(vert.min(),vert.max()+self.Lbox)
-            ax2.set_xlim3d(vert.min(),vert.max()+self.Lbox)
-            ax3.set_xlim([vert.min(),vert.max()+self.Lbox])
-            ax3.set_ylim([vert.min(),vert.max()+self.Lbox])
-            ax4.set_xlim([vert.min(),vert.max()+self.Lbox])
-            ax4.set_ylim([vert.min(),vert.max()+self.Lbox])
+            ax1.set_xlim([vert.min(), vert.max() + self.Lbox])
+            ax1.set_ylim([vert.min(), vert.max() + self.Lbox])
+            ax2.set_zlim3d(vert.min(), vert.max() + self.Lbox)
+            ax2.set_ylim3d(vert.min(), vert.max() + self.Lbox)
+            ax2.set_xlim3d(vert.min(), vert.max() + self.Lbox)
+            ax3.set_xlim([vert.min(), vert.max() + self.Lbox])
+            ax3.set_ylim([vert.min(), vert.max() + self.Lbox])
+            ax4.set_xlim([vert.min(), vert.max() + self.Lbox])
+            ax4.set_ylim([vert.min(), vert.max() + self.Lbox])
 
-        ax1.set_xlabel('X [cMpc]')
-        ax1.set_ylabel('Y [cMpc]')
-        ax2.set_xlabel('X [cMpc]')
-        ax2.set_ylabel('Y [cMpc]')
-        ax2.set_zlabel('Z [cMpc]')
-        ax3.set_xlabel('X [cMpc]')
-        ax3.set_ylabel('Z [cMpc]')
-        ax4.set_xlabel('Y [cMpc]')
-        ax4.set_ylabel('Z [cMpc]')
+        ax1.set_xlabel("X [cMpc]")
+        ax1.set_ylabel("Y [cMpc]")
+        ax2.set_xlabel("X [cMpc]")
+        ax2.set_ylabel("Y [cMpc]")
+        ax2.set_zlabel("Z [cMpc]")
+        ax3.set_xlabel("X [cMpc]")
+        ax3.set_ylabel("Z [cMpc]")
+        ax4.set_xlabel("Y [cMpc]")
+        ax4.set_ylabel("Z [cMpc]")
 
         if Tesselations:
             for og in vert:
-                render_cube(ax2,O=og,L=self.Lbox)
+                render_cube(ax2, O=og, L=self.Lbox)
 
-                axis = [0,1]
-                rec = coordinate_plane(og,Lbox=self.Lbox, axes=axis)
-                rec[2:,:] = rec[2:,:][::-1]
-                rec = np.vstack((rec,rec[0,:]))
-                ax1.plot(rec[:,axis[0]],rec[:,axis[1]], 'b',alpha=0.25)
-                
-                axis = [0,2]
-                rec = coordinate_plane(og,Lbox=self.Lbox, axes=axis)
-                rec[2:,:] = rec[2:,:][::-1]
-                rec = np.vstack((rec,rec[0,:]))
-                ax3.plot(rec[:,axis[0]],rec[:,axis[1]], 'b',alpha=0.25)
-                
-                axis = [1,2]
-                rec = coordinate_plane(og,Lbox=self.Lbox, axes=axis)
-                rec[2:,:] = rec[2:,:][::-1]
-                rec = np.vstack((rec,rec[0,:]))
-                ax4.plot(rec[:,axis[0]],rec[:,axis[1]], 'b',alpha=0.25)
+                axis = [0, 1]
+                rec = coordinate_plane(og, Lbox=self.Lbox, axes=axis)
+                rec[2:, :] = rec[2:, :][::-1]
+                rec = np.vstack((rec, rec[0, :]))
+                ax1.plot(rec[:, axis[0]], rec[:, axis[1]], "b", alpha=0.25)
+
+                axis = [0, 2]
+                rec = coordinate_plane(og, Lbox=self.Lbox, axes=axis)
+                rec[2:, :] = rec[2:, :][::-1]
+                rec = np.vstack((rec, rec[0, :]))
+                ax3.plot(rec[:, axis[0]], rec[:, axis[1]], "b", alpha=0.25)
+
+                axis = [1, 2]
+                rec = coordinate_plane(og, Lbox=self.Lbox, axes=axis)
+                rec[2:, :] = rec[2:, :][::-1]
+                rec = np.vstack((rec, rec[0, :]))
+                ax4.plot(rec[:, axis[0]], rec[:, axis[1]], "b", alpha=0.25)
 
         if LoS:
-            a = Arrow3D([self.u3[0]*D_min, self.u3[0]*D_max], [self.u3[1]*D_min, self.u3[1]*D_max], [self.u3[2]*D_min, self.u3[2]*D_max], mutation_scale=20,
-                        lw=2, arrowstyle="-|>", color="r")
+            a = Arrow3D(
+                [self.u3[0] * D_min, self.u3[0] * D_max],
+                [self.u3[1] * D_min, self.u3[1] * D_max],
+                [self.u3[2] * D_min, self.u3[2] * D_max],
+                mutation_scale=20,
+                lw=2,
+                arrowstyle="-|>",
+                color="r",
+            )
             ax2.add_artist(a)
 
-            x = self.u3[0]*D_min
-            dx = np.diff([self.u3[0]*D_min, self.u3[0]*D_max])[0]
-            y = self.u3[1]*D_min
-            dy = np.diff([self.u3[1]*D_min, self.u3[1]*D_max])[0]
-            ax1.arrow(x,y,dx,dy,lw=2,color="r")
+            x = self.u3[0] * D_min
+            dx = np.diff([self.u3[0] * D_min, self.u3[0] * D_max])[0]
+            y = self.u3[1] * D_min
+            dy = np.diff([self.u3[1] * D_min, self.u3[1] * D_max])[0]
+            ax1.arrow(x, y, dx, dy, lw=2, color="r")
 
-            x = self.u3[0]*D_min
-            dx = np.diff([self.u3[0]*D_min, self.u3[0]*D_max])[0]
-            y = self.u3[2]*D_min
-            dy = np.diff([self.u3[2]*D_min, self.u3[2]*D_max])[0]
-            ax3.arrow(x,y,dx,dy,lw=2,color="r")
+            x = self.u3[0] * D_min
+            dx = np.diff([self.u3[0] * D_min, self.u3[0] * D_max])[0]
+            y = self.u3[2] * D_min
+            dy = np.diff([self.u3[2] * D_min, self.u3[2] * D_max])[0]
+            ax3.arrow(x, y, dx, dy, lw=2, color="r")
 
-            x = self.u3[1]*D_min
-            dx = np.diff([self.u3[1]*D_min, self.u3[1]*D_max])[0]
-            y = self.u3[2]*D_min
-            dy = np.diff([self.u3[2]*D_min, self.u3[2]*D_max])[0]
-            ax4.arrow(x,y,dx,dy,lw=2,color="r")
+            x = self.u3[1] * D_min
+            dx = np.diff([self.u3[1] * D_min, self.u3[1] * D_max])[0]
+            y = self.u3[2] * D_min
+            dy = np.diff([self.u3[2] * D_min, self.u3[2] * D_max])[0]
+            ax4.arrow(x, y, dx, dy, lw=2, color="r")
 
         if Cone_edges:
             r = [-0.5, 0.5]
@@ -615,22 +660,28 @@ class lightcone():
                 for j, r2 in enumerate(r):
                     vec = rotate(self.u3, angle=self.dd.value * r1, u=self.u1)
                     vec = rotate(vec, angle=self.da.value * r2, u=self.u2)
-                    ax2.plot([vec[0]*D_min, vec[0]*D_max], [vec[1]*D_min, vec[1]*D_max], [vec[2]*D_min, vec[2]*D_max],lw=2, color='g')
+                    ax2.plot(
+                        [vec[0] * D_min, vec[0] * D_max],
+                        [vec[1] * D_min, vec[1] * D_max],
+                        [vec[2] * D_min, vec[2] * D_max],
+                        lw=2,
+                        color="g",
+                    )
 
-                    x = vec[0]*D_min
-                    dx = np.diff([vec[0]*D_min, vec[0]*D_max])[0]
-                    y = vec[1]*D_min
-                    dy = np.diff([vec[1]*D_min, vec[1]*D_max])[0]
-                    ax1.arrow(x,y,dx,dy,lw=2,color="g")
+                    x = vec[0] * D_min
+                    dx = np.diff([vec[0] * D_min, vec[0] * D_max])[0]
+                    y = vec[1] * D_min
+                    dy = np.diff([vec[1] * D_min, vec[1] * D_max])[0]
+                    ax1.arrow(x, y, dx, dy, lw=2, color="g")
 
-                    x = vec[0]*D_min
-                    dx = np.diff([vec[0]*D_min, vec[0]*D_max])[0]
-                    y = vec[2]*D_min
-                    dy = np.diff([vec[2]*D_min, vec[2]*D_max])[0]
-                    ax3.arrow(x,y,dx,dy,lw=2,color="g")
+                    x = vec[0] * D_min
+                    dx = np.diff([vec[0] * D_min, vec[0] * D_max])[0]
+                    y = vec[2] * D_min
+                    dy = np.diff([vec[2] * D_min, vec[2] * D_max])[0]
+                    ax3.arrow(x, y, dx, dy, lw=2, color="g")
 
-                    x = vec[1]*D_min
-                    dx = np.diff([vec[1]*D_min, vec[1]*D_max])[0]
-                    y = vec[2]*D_min
-                    dy = np.diff([vec[2]*D_min, vec[2]*D_max])[0]
-                    ax4.arrow(x,y,dx,dy,lw=2,color="g")
+                    x = vec[1] * D_min
+                    dx = np.diff([vec[1] * D_min, vec[1] * D_max])[0]
+                    y = vec[2] * D_min
+                    dy = np.diff([vec[2] * D_min, vec[2] * D_max])[0]
+                    ax4.arrow(x, y, dx, dy, lw=2, color="g")

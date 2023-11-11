@@ -7,7 +7,8 @@ from mpl_toolkits.mplot3d import proj3d
 import numpy as np
 from itertools import product, combinations
 
-__author__ = ('Joseph O\'Leary', )
+__author__ = ("Joseph O'Leary",)
+
 
 def linestyle(sequence=None, dash=None, dot=None, space=None, buffer=False, offset=0):
     """Generate more linetypes from arbitrary `-`,`.` combinations with added
@@ -37,27 +38,27 @@ def linestyle(sequence=None, dash=None, dot=None, space=None, buffer=False, offs
         tuple containing the matplotlib linestyle `offset`, and `onoffseq`
 
     """
-    if (sequence is None) or (sequence == '-') or (sequence == '_'):
-        return '-'
-    elif sequence == ':':
+    if (sequence is None) or (sequence == "-") or (sequence == "_"):
+        return "-"
+    elif sequence == ":":
         return sequence
     else:
         if dash is None:
-            dash = plt.rcParamsDefault['lines.dashed_pattern'][0]
-            if (sequence.count('.') > 0) or (sequence.count(':') > 0):
-                dash = plt.rcParamsDefault['lines.dashdot_pattern'][0]
+            dash = plt.rcParamsDefault["lines.dashed_pattern"][0]
+            if (sequence.count(".") > 0) or (sequence.count(":") > 0):
+                dash = plt.rcParamsDefault["lines.dashdot_pattern"][0]
 
         if dot is None:
-            dot = plt.rcParamsDefault['lines.dotted_pattern'][0]
+            dot = plt.rcParamsDefault["lines.dotted_pattern"][0]
 
         if space is None:
-            space = plt.rcParamsDefault['lines.dashed_pattern'][1]
+            space = plt.rcParamsDefault["lines.dashed_pattern"][1]
 
         reftype = {}
-        reftype['-'] = [dash, space]
-        reftype['_'] = [2 * dash, space]
-        reftype['.'] = [dot, space]
-        reftype[':'] = [dot, space, dot, space, dot, space]
+        reftype["-"] = [dash, space]
+        reftype["_"] = [2 * dash, space]
+        reftype["."] = [dot, space]
+        reftype[":"] = [dot, space, dot, space, dot, space]
         onoffseq = []
         for i, s in enumerate(sequence):
             onoffseq.extend(reftype[s])
@@ -71,14 +72,16 @@ def ls(sequence, **kwargs):
     return linestyle(sequence, **kwargs)
 
 
-def render_cube(ax,O,L):
+def render_cube(ax, O, L):
     # Adapted from
     # https://stackoverflow.com/questions/11140163/plotting-a-3d-cube-a-sphere-and-a-vector-in-matplotlib
     r = [0, L]
     og = np.atleast_1d(O)
     for s, e in combinations(np.array(list(product(r, r, r))), 2):
-        if np.sum(np.abs(s-e)) == r[1]-r[0]:
-            ln = ax.plot3D(*zip(og+np.array(s), og+np.array(e)), color="b",alpha=0.25)
+        if np.sum(np.abs(s - e)) == r[1] - r[0]:
+            ln = ax.plot3D(
+                *zip(og + np.array(s), og + np.array(e)), color="b", alpha=0.25
+            )
     return ln
 
 

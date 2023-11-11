@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "galaxybox"
+version = "1.0.0"
+description = ""
+authors = ["Joseph O'Leary <oleary.joseph@outlook.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.13"
+astropy = "^5.3.4"
+halotools = "^0.8.2"
+h5py = "^3.10.0"
+matplotlib = "^3.8.1"
+numpy = "^1.26.1"
+pandas = "^2.1.3"
+scipy = "^1.11.3"
+shapely = "^2.0.2"
+tqdm = "^4.66.1"
+seaborn = "^0.13.0"
+pyyaml = "^6.0.1"
+
+
+[build-system]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.poetry-dynamic-versioning]
+enable = true

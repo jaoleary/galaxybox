@@ -5,7 +5,7 @@ import astropy.units as apunits
 from shapely.geometry import Polygon
 from scipy.spatial.transform.rotation import Rotation
 import matplotlib.pyplot as plt
-from galaxybox.helper_functions import (
+from galaxybox.utils import (
     coordinate_plane,
     poly_traverse,
     rotate,

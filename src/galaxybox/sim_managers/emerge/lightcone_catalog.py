@@ -2,12 +2,12 @@
 from astropy import constants as apconst
 import astropy.units as apunits
 
-from ...io.io import *
-from ...io.emerge_io import *
-from ...helper_functions import *
-from ...plot.plot import *
-from ...plot.emerge_plot import *
-from ...mock_observables import *
+from galaxybox.data.io.io import *
+from galaxybox.data.io.emerge_io import *
+from galaxybox.utils import *
+from galaxybox.visualization.plot import *
+from galaxybox.visualization.emerge_plot import *
+from galaxybox.mock_observables import *
 
 import numpy as np
 import pandas as pd

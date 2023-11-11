@@ -1,7 +1,7 @@
 """Classes for handling Emerge galaxy merger tree data."""
-from ...io.emerge_io import read_tree
-from ...helper_functions import arg_parser
-from ...mock_observables import lightcone
+from galaxybox.data.io.emerge_io import read_tree
+from galaxybox.utils import arg_parser
+from galaxybox.mock_observables import lightcone
 
 from astropy import cosmology as apcos
 from astropy import constants as apconst

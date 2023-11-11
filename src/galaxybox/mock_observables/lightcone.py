@@ -5,14 +5,14 @@ import astropy.units as apunits
 from shapely.geometry import Polygon
 from scipy.spatial.transform.rotation import Rotation
 import matplotlib.pyplot as plt
-from ..helper_functions import (
+from galaxybox.helper_functions import (
     coordinate_plane,
     poly_traverse,
     rotate,
     shuffle_string,
     translate,
 )
-from ..plot.plot import Arrow3D, render_cube
+from galaxybox.visualization.plot import Arrow3D, render_cube
 
 __author__ = ("Joseph O'Leary",)
 

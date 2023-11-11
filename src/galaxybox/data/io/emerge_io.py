@@ -4,7 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 import struct
-from .io import recursive_hdf5
+from galaxybox.data.io import recursive_hdf5
 
 __author__ = ("Joseph O'Leary",)
 

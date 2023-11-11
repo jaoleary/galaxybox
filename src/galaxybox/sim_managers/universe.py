@@ -3,15 +3,13 @@ import numpy as np
 import os
 import copy
 from astropy import cosmology as apcos
-from . import emerge as em
-from ..helper_functions.functions import *
-from ..io import emerge_io as em_io
+from galaxybox.sim_managers.emerge import emerge as em
+from galaxybox.helper_functions.functions import *
+from galaxybox.data.io import emerge_io as em_io
 from matplotlib.pyplot import savefig
 import warnings
 import glob
 from types import SimpleNamespace
-
-__author__ = ("Joseph O'Leary",)
 
 
 class Universe:

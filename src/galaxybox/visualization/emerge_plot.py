@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from ..io.emerge_io import read_chain, read_statistics
-from ..helper_functions.functions import clevels
+from galaxybox.data.io.emerge_io import read_chain, read_statistics
+from galaxybox.helper_functions.functions import clevels
 import os
 
 __author__ = (

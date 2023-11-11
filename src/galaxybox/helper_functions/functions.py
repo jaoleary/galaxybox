@@ -6,11 +6,6 @@ import inspect
 from astropy import cosmology as apcos
 import astropy.units as apunits
 
-__author__ = (
-    "Joseph O'Leary",
-    "Benjamin Moster",
-)
-
 
 def clevels(z, level=0.68, bins=1000):
     """confidence levels"""

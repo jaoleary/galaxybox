@@ -1,13 +1,12 @@
-"""
-Module containing common plotting functions for emerge data.
-"""
-import numpy as np
-import pandas as pd
+"""Module containing common plotting functions for emerge data."""
+
+import os
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from galaxybox.data.io.emerge_io import read_chain, read_statistics
-from galaxybox.utils.functions import clevels
-import os
+import numpy as np
+
+from galaxybox.data.emerge_io import read_statistics
 
 __author__ = (
     "Joseph O'Leary",
@@ -26,10 +25,9 @@ def plot_stats_csfrd(
     obs_alpha=1.0,
     save=False,
     fig_out=None,
-    **kwargs
+    **kwargs,
 ):
-    """
-    Plot the CSFRD statistics from an emerge statistics file
+    """Plot the CSFRD statistics from an emerge statistics file
 
     Parameters
     ----------
@@ -42,8 +40,8 @@ def plot_stats_csfrd(
 
     save : boolean, optional
         If 'True' figure will be saved to current working directory as 'CSFRD.pdf'.
-    """
 
+    """
     mark = [
         ".",
         "o",
@@ -100,9 +98,7 @@ def plot_stats_csfrd(
             size=labelsize,
         )
         ax.xaxis.set_major_locator(ticker.FixedLocator(np.arange(1, 14, 1)))
-        ax.set_xticklabels(
-            ("0", "1", "2", "3", "4", "5", "6", " ", "8", " ", "10", " ", "12", " ")
-        )
+        ax.set_xticklabels(("0", "1", "2", "3", "4", "5", "6", " ", "8", " ", "10", " ", "12", " "))
 
     # Open Data group
     csfrddata = csfrd["Data"]
@@ -147,10 +143,9 @@ def plot_stats_clustering(
     obs_alpha=1.0,
     save=False,
     fig_out=None,
-    **kwargs
+    **kwargs,
 ):
-    """
-    Plot the clustering statistics from an emerge statistics file
+    """Plot the clustering statistics from an emerge statistics file
 
     Parameters
     ----------
@@ -163,8 +158,8 @@ def plot_stats_clustering(
 
     save : boolean, optional
         If 'True' figure will be saved to current working directory as 'clustering.pdf'.
-    """
 
+    """
     mark = [
         ".",
         "o",
@@ -229,9 +224,7 @@ def plot_stats_clustering(
             right=True,
         )
         ax[0, 0].yaxis.set_major_formatter(ticker.ScalarFormatter())
-        ax[0, 0].yaxis.set_major_locator(
-            ticker.FixedLocator([1.0, 10.0, 100.0, 1000.0])
-        )
+        ax[0, 0].yaxis.set_major_locator(ticker.FixedLocator([1.0, 10.0, 100.0, 1000.0]))
         ax[0, 0].xaxis.set_major_formatter(ticker.ScalarFormatter())
         ax[0, 0].xaxis.set_major_locator(ticker.FixedLocator([0.01, 0.1, 1.0, 10.0]))
 
@@ -262,9 +255,7 @@ def plot_stats_clustering(
             if observations:
                 yo = wpset["Wp_observed"]
                 so = wpset["Sigma_observed"]
-                axi.errorbar(
-                    xo, yo, yerr=so, marker="x", ls="none", color="red", alpha=obs_alpha
-                )
+                axi.errorbar(xo, yo, yerr=so, marker="x", ls="none", color="red", alpha=obs_alpha)
             axi.plot(xo, ym, **kwargs)
             if annotate:
                 axi.annotate(
@@ -293,10 +284,9 @@ def plot_stats_fq(
     obs_alpha=1.0,
     save=False,
     fig_out=None,
-    **kwargs
+    **kwargs,
 ):
-    """
-    Plot the quenched fraction from an emerge statistics file
+    """Plot the quenched fraction from an emerge statistics file
 
     Parameters
     ----------
@@ -309,8 +299,8 @@ def plot_stats_fq(
 
     save : boolean, optional
         If 'True' figure will be saved to current working directory as 'quenched_fraction.pdf'.
-    """
 
+    """
     mark = [
         ".",
         "o",
@@ -443,9 +433,7 @@ def plot_stats_fq(
 
     if save is True:
         if fig_out:
-            plt.savefig(
-                os.path.join(fig_out, "quenched_fraction.pdf"), bbox_inches="tight"
-            )
+            plt.savefig(os.path.join(fig_out, "quenched_fraction.pdf"), bbox_inches="tight")
         else:
             plt.savefig("quenched_fraction.pdf", bbox_inches="tight")
     return ax
@@ -460,10 +448,9 @@ def plot_stats_smf(
     obs_alpha=1.0,
     save=False,
     fig_out=None,
-    **kwargs
+    **kwargs,
 ):
-    """
-    Plot the stellar mass function from an emerge statistics file
+    """Plot the stellar mass function from an emerge statistics file
 
     Parameters
     ----------
@@ -476,8 +463,8 @@ def plot_stats_smf(
 
     save : boolean, optional
         If 'True' figure will be saved to current working directory as 'SMF.pdf'.
-    """
 
+    """
     mark = [
         ".",
         "o",
@@ -637,10 +624,9 @@ def plot_stats_ssfr(
     obs_alpha=1.0,
     save=False,
     fig_out=None,
-    **kwargs
+    **kwargs,
 ):
-    """
-    Plot the specific star formation rates from an emerge statistics file
+    """Plot the specific star formation rates from an emerge statistics file
 
     Parameters
     ----------
@@ -653,8 +639,8 @@ def plot_stats_ssfr(
 
     save : boolean, optional
         If 'True' figure will be saved to current working directory as 'SSFR.pdf'.
-    """
 
+    """
     mark = [
         ".",
         "o",
@@ -734,12 +720,8 @@ def plot_stats_ssfr(
         ymax = -7.6
         ax[0, 0].axis([xmin, xmax, ymin, ymax])
         ax[0, 0].set_xscale("log")
-        ax[0, 0].set_ylabel(
-            r"$\log_{10}(\mathrm{sSFR} / \mathrm{yr}^{-1})$", size=labelsize
-        )
-        ax[1, 0].set_ylabel(
-            r"$\log_{10}(\mathrm{sSFR} / \mathrm{yr}^{-1})$", size=labelsize
-        )
+        ax[0, 0].set_ylabel(r"$\log_{10}(\mathrm{sSFR} / \mathrm{yr}^{-1})$", size=labelsize)
+        ax[1, 0].set_ylabel(r"$\log_{10}(\mathrm{sSFR} / \mathrm{yr}^{-1})$", size=labelsize)
         ax[1, 0].set_xlabel(r"$z$", size=labelsize)
         ax[1, 1].set_xlabel(r"$z$", size=labelsize)
 
@@ -832,9 +814,7 @@ def plot_efficiency(
         ax.set_xlabel("$\log_{10}(M_{\mathrm{h}}/\mathrm{M}_{\odot})$", size=labelfs)
         ax.yaxis.set_major_formatter(
             ticker.FuncFormatter(
-                lambda y, pos: (
-                    "{{:.{:1d}f}}".format(int(np.maximum(-np.log10(y), 0)))
-                ).format(y)
+                lambda y, pos: ("{{:.{:1d}f}}".format(int(np.maximum(-np.log10(y), 0)))).format(y)
             )
         )
 

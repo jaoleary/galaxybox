@@ -1,51 +1,30 @@
-import pandas as pd
-from torch.utils.data import Dataset
 import numpy as np
-import pyarrow.parquet as pq
+from torch.utils.data import Dataset
 
-class GalaxyTreesDataset(Dataset):
-    UnitTime_in_yr=1.0e9
-    def __init__(self, filepath, preload=True, mode='tree'):
+class ProtoTree(Dataset):
+    def __getitem__(index):
+        return
+    def tree(self, *args, **kwargs):
+        raise NotImplementedError
+    
+    def branch(self, *args, **kwargs):
+        raise NotImplementedError
+    
+    def list(self, *args, **kwargs):
+        raise NotImplementedError
+    
+    def alias(self, *args, **kwargs):
+        raise NotImplementedError
+    
+    def query(self, query, columns):
+        raise NotImplementedError
+
+class ProtoGalaxyTree(ProtoTree):
+    def __init__(self, filepath, mode='tree', UnitTime_in_yr=1.0e9):
         self.filepath = filepath
-        
-        # Open the Parquet file and get the schema
-        parquet_file = pq.ParquetFile('/'.join([self.filepath, 'tree.0.parquet']))
-        schema = parquet_file.schema
-        self.columns = schema.names
-    def __getitem__(self, index):
-        return 
-        
-    def tree(self, index):
-        if 'Leaf_ID' in self.columns:
-            leaf_idx = self.list(id=index)['Leaf_ID'].squeeze() + 1
-            return self.list(min_id=index, max_id=leaf_idx)
-        else:
-            raise NotImplementedError('recursive loading not yet available.')
-    
-    def branch(self, index):
-        tree = self.tree(index)
-        # Only include most massive progenitors
-        mmp_mask = (tree["MMP"] == 1) | (tree["Scale"] == tree["Scale"].max())
-        mb = tree.loc[mmp_mask]
+        self.mode = mode
+        self.UnitTime_in_yr = UnitTime_in_yr
 
-        # initialize a mask
-        mask = np.full(len(mb), False)
-        desc = index
-
-        # iterate over the mmp tree finding the mmp route leading to the root galaxy
-        i = 0
-        for row in mb.to_records():
-            if i == 0:
-                mask[i] = True
-            else:
-                r_id = row["Desc_ID"]
-                if r_id == desc:
-                    mask[i] = True
-                    desc = row["ID"]
-            i += 1
-        return mb[mask]
-
-    
     def alias(self, key):
         """Return proper coloumn key for input alias key.
 
@@ -105,7 +84,7 @@ class GalaxyTreesDataset(Dataset):
                 return k
         raise KeyError("`{}` has no known alias.".format(key))
     
-    def list(self, mask_only=False, **kwargs):
+    def list(self, columns=None, **kwargs):
         """Return list of galaxy with specified properties.
 
         This function selects galaxies based on a flexible set of arguments. Any column of the galaxy.trees attribute can
@@ -124,6 +103,9 @@ class GalaxyTreesDataset(Dataset):
 
         # TODO: expand this docstring and add examples.
         """
+        if columns is None:
+            columns = self.columns
+        read_columns = columns
         # First clean up kwargs, replace aliases
         keys = list(kwargs.keys())
         for i, kw in enumerate(keys):
@@ -159,31 +141,7 @@ class GalaxyTreesDataset(Dataset):
                         values = np.atleast_1d(kwargs[kw]).tolist()
                         filters.append((key, 'in', values))
 
-        galaxies = pd.read_parquet(self.filepath, filters=filters, dtype_backend='pyarrow')
-        # Setup a default `True` mask, this is kindof a dumb step
-        mask = galaxies["Scale"] > 0
-        # Create masks for derived quantities such as `color`.
-        if "color" in kwargs.keys():
-            if kwargs["color"].lower() == "blue":
-                mask = mask & (
-                    (np.log10(galaxies["SFR"]) - galaxies["Stellar_mass"])
-                    >= np.log10(0.3 / galaxies["Age"] / self.UnitTime_in_yr)
-                )
-            elif kwargs["color"].lower() == "red":
-                mask = mask & (
-                    (np.log10(galaxies["SFR"]) - galaxies["Stellar_mass"])
-                    < np.log10(0.3 / galaxies["Age"] / self.UnitTime_in_yr)
-                )
-        if "color_obs" in kwargs.keys():
-            if kwargs["color_obs"].lower() == "blue":
-                mask = mask & (
-                    (np.log10(galaxies["SFR_obs"]) - galaxies["Stellar_mass_obs"])
-                    >= np.log10(0.3 / galaxies["Age"] / self.UnitTime_in_yr)
-                )
-            elif kwargs["color_obs"].lower() == "red":
-                mask = mask & (
-                    (np.log10(galaxies["SFR_obs"]) - galaxies["Stellar_mass_obs"])
-                    < np.log10(0.3 / galaxies["Age"] / self.UnitTime_in_yr)
-                )
+        galaxies = self.query(query=filters, columns=read_columns)
 
-        return galaxies.loc[mask] 
+        columns = [item for item in columns if item != galaxies.index.name]
+        return galaxies[columns]

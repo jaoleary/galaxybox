@@ -3,9 +3,9 @@ import numpy as np
 import os
 import copy
 from astropy import cosmology as apcos
-from galaxybox.sim_managers.emerge import emerge as em
+import galaxybox.modules.emerge as em
 from galaxybox.utils.functions import *
-from galaxybox.data.io import emerge_io as em_io
+from galaxybox.data import emerge_io as em_io
 from matplotlib.pyplot import savefig
 import warnings
 import glob

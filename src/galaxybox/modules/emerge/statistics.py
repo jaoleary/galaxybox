@@ -1,6 +1,6 @@
 """Classes for handling Emerge data."""
-from ...io.emerge_io import read_statistics
-from ...plot.emerge_plot import (
+from galaxybox.data.emerge_io import read_statistics
+from galaxybox.visualization.emerge_plot import (
     plot_stats_csfrd,
     plot_stats_clustering,
     plot_stats_fq,
@@ -8,9 +8,6 @@ from ...plot.emerge_plot import (
     plot_stats_ssfr,
 )
 import os
-
-__author__ = ("Joseph O'Leary",)
-
 
 class statistics:
     """Class for Emerge `statistics.h5` file."""

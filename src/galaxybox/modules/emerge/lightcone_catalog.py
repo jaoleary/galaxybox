@@ -3,7 +3,7 @@ from astropy import constants as apconst
 import astropy.units as apunits
 
 from galaxybox.data.io.io import *
-from galaxybox.data.io.emerge_io import *
+from galaxybox.data.emerge_io import *
 from galaxybox.utils import *
 from galaxybox.visualization.plot import *
 from galaxybox.visualization.emerge_plot import *

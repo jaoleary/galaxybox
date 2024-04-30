@@ -325,7 +325,7 @@ def read_halo_trees(file_path, file_format="EMERGE", fields_out=None):
 
         dt = np.dtype(
             [
-                ("haloid", np.uintc),
+                ("id", np.uintc),
                 ("descid", np.uintc),
                 ("upid", np.uintc),
                 ("np", np.ushort),
@@ -335,12 +335,12 @@ def read_halo_trees(file_path, file_format="EMERGE", fields_out=None):
                 ("rvir", np.single),
                 ("concentration", np.single),
                 ("lambda", np.single),
-                ("X_pos", np.single),
-                ("Y_pos", np.single),
-                ("Z_pos", np.single),
-                ("X_vel", np.single),
-                ("Y_vel", np.single),
-                ("Z_vel", np.single),
+                ("pos_x", np.single),
+                ("pos_y", np.single),
+                ("pox_z", np.single),
+                ("vel_x", np.single),
+                ("vel_y", np.single),
+                ("vel_z", np.single),
             ]
         )
         file = open(file_path, "rb")

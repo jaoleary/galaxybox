@@ -1,6 +1,5 @@
 """Classes for handling Emerge galaxy merger tree data."""
-from galaxybox.data.io.emerge_io import read_tree
-from galaxybox.utils import arg_parser
+from galaxybox.utils.functions import arg_parser
 from galaxybox.mock_observables import lightcone
 
 from astropy import cosmology as apcos
@@ -26,8 +25,9 @@ class galaxy_trees:
     """A class for reading in and operating on Emerge galaxy merger trees
     alone or within the context of a Universe.
     """
+    OutputMassThreshold = 7
 
-    def __init__(self, trees_path, add_attrs=None, fields_out=None):
+    def __init__(self, trees_path, add_attrs=None, **kwargs):
         """Initialize a galaxy_trees object
 
         Parameters
@@ -48,7 +48,7 @@ class galaxy_trees:
 
         frames = [None] * len(self.trees_used)
         for i, file in enumerate(tqdm(self.trees_used, desc="Loading galaxy trees")):
-            frames[i] = read_tree(file, fields_out=fields_out)
+            frames[i] = pd.read_parquet(file, **kwargs)
         forest = pd.concat(frames)
 
         forest.set_index("ID", drop=True, inplace=True)
@@ -60,26 +60,26 @@ class galaxy_trees:
 
         self.snapshots = []
 
-        self.__galaxies = {}
+        self._galaxies = {}
         for i in range(len(self.scales)):
             self.snapshots.append("S{:d}".format(i))
-            self.__galaxies["S{:d}".format(i)] = np.logical_and(
+            self._galaxies["S{:d}".format(i)] = np.logical_and(
                 self.trees["Scale"] == self.scales[i],
                 self.trees["Stellar_mass"] >= self.OutputMassThreshold,
             )
 
-        self.__roots_mask = self.trees["Scale"] == self.trees["Scale"].max()
-        self.__roots_idx = pd.DataFrame(index=self.trees.loc[self.__roots_mask].index)
-        self.__roots_idx["root_idx"] = np.argwhere(self.__roots_mask.values).flatten()
-        self.__roots_idx["leaf_idx"] = self.__roots_idx["root_idx"] + np.append(
-            np.diff(self.__roots_idx["root_idx"]),
-            (len(self.trees) - 1 - self.__roots_idx["root_idx"].iloc[-1]),
+        self._roots_mask = self.trees["Scale"] == self.trees["Scale"].max()
+        self._roots_idx = pd.DataFrame(index=self.trees.loc[self._roots_mask].index)
+        self._roots_idx["root_idx"] = np.argwhere(self._roots_mask.values).flatten()
+        self._roots_idx["leaf_idx"] = self._roots_idx["root_idx"] + np.append(
+            np.diff(self._roots_idx["root_idx"]),
+            (len(self.trees) - 1 - self._roots_idx["root_idx"].iloc[-1]),
         )
         self.sorted = False
         if "Leaf_ID" in self.trees.keys():
-            self.__leaf = True
+            self._leaf = True
         else:
-            self.__leaf = False
+            self._leaf = False
 
     def __repr__(self):
         """pass through the pandas dataframe __repr__"""
@@ -241,7 +241,7 @@ class galaxy_trees:
             Merger tree
 
         """
-        if self.__leaf:
+        if self._leaf:
             if self.sorted:
                 if unsort:
                     return self.trees.loc[
@@ -258,7 +258,7 @@ class galaxy_trees:
         else:
             if root:
                 return self.trees.iloc[
-                    self.__roots_idx.loc[igal]["root_idx"] : self.__roots_idx.loc[igal][
+                    self._roots_idx.loc[igal]["root_idx"] : self._roots_idx.loc[igal][
                         "leaf_idx"
                     ]
                 ]
@@ -286,7 +286,7 @@ class galaxy_trees:
         pandas.Dataframe
             Main branch
         """
-        if self.__leaf:
+        if self._leaf:
             tree = self.tree(igal)
             # Only include most massive progenitors
             mmp_mask = (tree["MMP"] == 1) | (tree["Scale"] == tree["Scale"].max())
@@ -618,7 +618,7 @@ class galaxy_trees:
             if kwargs["snapshot"] == "all":
                 galaxy_list = self.trees
             else:
-                galaxy_list = self.trees.loc[self.__galaxies[kwargs["snapshot"]]]
+                galaxy_list = self.trees.loc[self._galaxies[kwargs["snapshot"]]]
             kwargs.pop("snapshot")
         elif "Scale" in kwargs:
             if kwargs["Scale"] == "all":
@@ -626,7 +626,7 @@ class galaxy_trees:
             else:
                 scale_arg = (np.abs(self.scales - kwargs["Scale"])).argmin()
                 s_key = self.snapshots[scale_arg]
-                galaxy_list = self.trees.loc[self.__galaxies[s_key]]
+                galaxy_list = self.trees.loc[self._galaxies[s_key]]
             kwargs.pop("Scale")
         elif "redshift" in kwargs:
             if kwargs["redshift"] == "all":
@@ -635,11 +635,11 @@ class galaxy_trees:
                 scale_factor = 1 / (kwargs["redshift"] + 1)
                 scale_arg = (np.abs(self.scales - scale_factor)).argmin()
                 s_key = self.snapshots[scale_arg]
-                galaxy_list = self.trees.loc[self.__galaxies[s_key]]
+                galaxy_list = self.trees.loc[self._galaxies[s_key]]
             kwargs.pop("redshift")
         else:
             s_key = self.snapshots[-1]
-            galaxy_list = self.trees.loc[self.__galaxies[s_key]]
+            galaxy_list = self.trees.loc[self._galaxies[s_key]]
 
         # Setup a default `True` mask
         mask = galaxy_list["Scale"] > 0
@@ -953,26 +953,26 @@ class galaxy_trees:
         ID sorting allows for faster retreival of individual galaxy trees/growth history.
         Sorting is particularly helpful for galaxies that arent a root.
         """
-        if self.__leaf:
+        if self._leaf:
             self.trees.sort_index(inplace=True)
             self.sorted = True
-            del self.__roots_idx
-            self.__roots_mask = self.trees["Scale"] == self.trees["Scale"].max()
-            self.__roots_idx = pd.DataFrame(
-                index=self.trees.loc[self.__roots_mask].index
+            del self._roots_idx
+            self._roots_mask = self.trees["Scale"] == self.trees["Scale"].max()
+            self._roots_idx = pd.DataFrame(
+                index=self.trees.loc[self._roots_mask].index
             )
-            self.__roots_idx["root_idx"] = np.argwhere(
-                self.__roots_mask.values
+            self._roots_idx["root_idx"] = np.argwhere(
+                self._roots_mask.values
             ).flatten()
-            self.__roots_idx["leaf_idx"] = self.__roots_idx["root_idx"] + np.append(
-                np.diff(self.__roots_idx["root_idx"]),
-                (len(self.trees) - 1 - self.__roots_idx["root_idx"].iloc[-1]),
+            self._roots_idx["leaf_idx"] = self._roots_idx["root_idx"] + np.append(
+                np.diff(self._roots_idx["root_idx"]),
+                (len(self.trees) - 1 - self._roots_idx["root_idx"].iloc[-1]),
             )
 
-            del self.__galaxies
-            self.__galaxies = {}
+            del self._galaxies
+            self._galaxies = {}
             for i in range(len(self.scales)):
-                self.__galaxies["S{:d}".format(i)] = np.logical_and(
+                self._galaxies["S{:d}".format(i)] = np.logical_and(
                     self.trees["Scale"] == self.scales[i],
                     self.trees["Stellar_mass"] >= self.OutputMassThreshold,
                 )
@@ -1256,9 +1256,9 @@ class galaxy_trees:
             The cosmic time when the two input galaxies finally merge. Returns 0 if the galaxies dont ever merge.
 
         """
-        if self.__leaf:
+        if self._leaf:
             # First we check if these two are in the same tree
-            __roots = self.trees.loc[self.__roots_mask].index.values
+            __roots = self.trees.loc[self._roots_mask].index.values
             if not self.sorted:
                 __roots = np.sort(__roots)
 

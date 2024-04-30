@@ -1,5 +1,5 @@
 """Classes for handling Emerge data."""
-from galaxybox.data.io.emerge_io import read_outputs
+from galaxybox.data.emerge_io import read_outputs
 
 import numpy as np
 import pandas as pd

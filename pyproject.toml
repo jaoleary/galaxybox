@@ -1,3 +1,8 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
 [tool.poetry]
 name = "galaxybox"
 version = "1.0.0"
@@ -6,7 +11,7 @@ authors = ["Joseph O'Leary <oleary.joseph@outlook.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.13"
+python = "^3.11"
 astropy = "^5.3.4"
 halotools = "^0.8.2"
 h5py = "^3.10.0"
@@ -18,11 +23,40 @@ shapely = "^2.0.2"
 tqdm = "^4.66.1"
 seaborn = "^0.13.0"
 pyyaml = "^6.0.1"
+pyarrow = "^14.0.1"
+tables = "^3.9.1"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.4.2"
+commitizen = "^3.24.0"
 
 
-[build-system]
-requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
-build-backend = "poetry_dynamic_versioning.backend"
+[tool.ruff]
+line-length = 100
+src = ['src/']
 
-[tool.poetry-dynamic-versioning]
-enable = true
+[tool.ruff.lint]
+select = ["E", "F", "I", "D", "N", "W291", "W292", "W293"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+
+[tool.commitizen]
+name = "cz_customize"
+version_provider = "poetry"
+version_files = ["pyproject.toml:^version"]
+update_changelog_on_bump = true
+bump_message = 'bump: $current_version \u2192 $new_version'
+bump_pattern = "^.*?(break|feat|fix|refactor|docs):?"
+bump_map = {"break"="MAJOR", "feat"="MINOR", "fix"="PATCH", "refactor"="PATCH", "docs"="PATCH"}
+commit_parser = "^.*?(?P<change_type>break|feat|fix|refactor|docs):\\s(?P<message>.*)?"
+changelog_pattern = "^(break|feat|fix|refactor|docs)?(!)?"

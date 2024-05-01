@@ -1,22 +1,20 @@
 """Classes for handling Emerge halo merger tree data."""
-from ...io.emerge_io import read_halo_forests, read_halo_trees
-from tqdm.auto import tqdm
-from scipy.interpolate import interp1d
-import numpy as np
-import pandas as pd
+
 import glob
 
-__author__ = ("Joseph O'Leary",)
+import numpy as np
+import pandas as pd
+from scipy.interpolate import interp1d
+from tqdm.auto import tqdm
+
+from galaxybox.data.emerge_io import read_halo_forests, read_halo_trees
 
 
-class halo_trees:
-    """
-    A class for reading in and operating on Emerge formated halo merger trees
-    alone or within the context of a Universe.
-    """
+class HaloTrees:
+    """A class for reading in and operating on Emerge formated halo merger trees."""
 
     def __init__(self, trees_path, add_attrs=None, include="halos"):
-        """Initialize a `halo_trees` object
+        """Initialize a `halo_trees` object.
 
         Parameters
         ----------
@@ -26,6 +24,7 @@ class halo_trees:
             A dictionary of additonal attributes to be attach to the class, by default None
         include : str, optional
             If include='halos' a snapshot dict will be created for the trees, by default 'halos'
+
         """
         if add_attrs:
             for i, k in enumerate(add_attrs.keys()):
@@ -43,12 +42,13 @@ class halo_trees:
         self.TreeID = []
         frames = [None] * len(self.trees_used)
         for i, file in enumerate(tqdm(self.trees_used, desc="Loading halo trees")):
-            Ntrees, Nhalos, TreeID, frames[i] = read_halo_trees(file)
-            self.Ntrees += Ntrees
-            self.Nhalos += list(Nhalos)
-            self.TreeID += list(TreeID)
+            ntrees, nhalos, treeid, frames[i] = read_halo_trees(file)
+            self.Ntrees += ntrees
+            self.Nhalos += list(nhalos)
+            self.TreeID += list(treeid)
         forest = pd.concat(frames)
         forest.set_index("haloid", inplace=True)
+
         #! TreeID numbers are incremented by 1 to match the id system used internally within Emerge
         # TODO: make this optional
         self.TreeID = np.array(self.TreeID) + 1
@@ -79,9 +79,7 @@ class halo_trees:
         self.trees.loc[root_mask & ~forest_mask, "hostid"] = self.trees.loc[
             root_mask & ~forest_mask
         ]["upid"].values
-        self.trees["hostid"] = self.trees.loc[
-            self.trees["rootid"].values, "hostid"
-        ].values
+        self.trees["hostid"] = self.trees.loc[self.trees["rootid"].values, "hostid"].values
 
         self.scales = np.sort(self.trees.scale.unique())
         if add_attrs:
@@ -90,40 +88,43 @@ class halo_trees:
 
         self.snapshots = []
         if include == "halos":
-            self.__halos = {}
+            self._halos = {}
             for i in range(len(self.scales)):
                 self.snapshots.append("S{:d}".format(i))
-                self.__halos["S{:d}".format(i)] = self.trees["scale"] == self.scales[i]
+                self._halos["S{:d}".format(i)] = self.trees["scale"] == self.scales[i]
         else:
             for i in range(len(self.scales)):
                 self.snapshots.append("S{:d}".format(i))
 
     @classmethod
-    def from_universe(cls, Universe, include):
-        """Initiate a `halo_tree` within the `Universe` class
+    def from_universe(cls, universe, include):
+        """Initiate a `halo_tree` within the `Universe` class.
 
         Parameters
         ----------
-        Universe : `galaxybox.Universe`
+        universe : `galaxybox.Universe`
             The outer universe class used to organize these galaxy trees
+        include : str
+            If include='halos' a snapshot dict will be created for the trees, by default 'halos'
 
         Returns
         -------
         galaxybox.halo_trees
             halo trees set from the universe
+
         """
         add = {
-            "out_dir": Universe.out_dir,
-            "fig_dir": Universe.fig_dir,
-            "TreefileName": Universe.TreefileName,
-            "ModelName": Universe.ModelName,
-            "BoxSize": Universe.BoxSize,
-            "UnitTime_in_yr": Universe.UnitTime_in_yr,
-            "UnitMass_in_Msun": Universe.UnitMass_in_Msun,
-            "UnitLength_in_Mpc": Universe.UnitLength_in_Mpc,
-            "cosmology": Universe.cosmology,
+            "out_dir": universe.out_dir,
+            "fig_dir": universe.fig_dir,
+            "TreefileName": universe.TreefileName,
+            "ModelName": universe.ModelName,
+            "BoxSize": universe.BoxSize,
+            "UnitTime_in_yr": universe.UnitTime_in_yr,
+            "UnitMass_in_Msun": universe.UnitMass_in_Msun,
+            "UnitLength_in_Mpc": universe.UnitLength_in_Mpc,
+            "cosmology": universe.cosmology,
         }
-        trees_path = [name for name in glob.glob(Universe.TreefileName + ".*")]
+        trees_path = [name for name in glob.glob(universe.TreefileName + ".*")]
         for i, f in enumerate(trees_path):
             if "forests" in f:
                 del trees_path[i]
@@ -141,6 +142,7 @@ class halo_trees:
         -------
         str
             The proper column name for the input alias
+
         """
         # first lets make all columns case insensitive
         colnames = list(self.trees.keys())
@@ -169,14 +171,17 @@ class halo_trees:
     def list(self, mask_only=False, **kwargs):
         """Return list of halos with specified properties.
 
-        This function selects halos based on a flexible set of arguments. Any column of the galaxy.trees attribute can
-        have a `min` are `max` added as a prefix or suffix to the column name or alias of the column name and passed as
-        and argument to this function. This can also be used to selected halos based on derived properties such as color.
+        This function selects halos based on a flexible set of arguments. Any column of the
+        galaxy.trees attribute can have a `min` are `max` added as a prefix or suffix to the column
+        name or alias of the column name and passed as and argument to this function. This can also
+        be used to selected halos based on derived properties such as color.
 
         Parameters
         ----------
         mask_only : bool, optional
             Return the dataframe, or a mask for the dataframe, by default False
+        **kwargs : dict
+            Additional keyword arguments for specifying halo properties.
 
         Returns
         -------
@@ -184,18 +189,13 @@ class halo_trees:
             A masked subset of the halo.trees attribute
 
         # TODO: expand this docstring and add examples.
+
         """
         # First clean up kwargs, replace aliases
         keys = list(kwargs.keys())
         for i, kw in enumerate(keys):
             keyl = kw.lower()
-            key = (
-                keyl.lower()
-                .replace("min", "")
-                .replace("max", "")
-                .lstrip("_")
-                .rstrip("_")
-            )
+            key = keyl.lower().replace("min", "").replace("max", "").lstrip("_").rstrip("_")
             new_key = kw.replace(key, self.alias(key))
             kwargs[new_key] = kwargs.pop(kw)
 
@@ -205,7 +205,7 @@ class halo_trees:
             if kwargs["snapshot"] == "all":
                 halo_list = self.trees
             else:
-                halo_list = self.trees.loc[self.__halos[kwargs["snapshot"]]]
+                halo_list = self.trees.loc[self._halos[kwargs["snapshot"]]]
             kwargs.pop("snapshot")
         elif "scale" in kwargs:
             if kwargs["scale"] == "all":
@@ -213,7 +213,7 @@ class halo_trees:
             else:
                 scale_arg = (np.abs(self.scales - kwargs["scale"])).argmin()
                 s_key = self.snapshots[scale_arg]
-                halo_list = self.trees.loc[self.__halos[s_key]]
+                halo_list = self.trees.loc[self._halos[s_key]]
             kwargs.pop("scale")
         elif "redshift" in kwargs:
             if kwargs["redshift"] == "all":
@@ -222,11 +222,11 @@ class halo_trees:
                 scale_factor = 1 / (kwargs["redshift"] + 1)
                 scale_arg = (np.abs(self.scales - scale_factor)).argmin()
                 s_key = self.snapshots[scale_arg]
-                halo_list = self.trees.loc[self.__halos[s_key]]
+                halo_list = self.trees.loc[self._halos[s_key]]
             kwargs.pop("redshift")
         else:
             s_key = self.snapshots[-1]
-            halo_list = self.trees.loc[self.__halos[s_key]]
+            halo_list = self.trees.loc[self._halos[s_key]]
 
         # Setup a default `True` mask
         mask = halo_list["scale"] > 0
@@ -260,39 +260,46 @@ class halo_trees:
             Scale factors at which a halo count should be performed, by default None
         dtype : data type, optional
             interpolated values will be cast into this type, by default int
+        **kwargs : dict
+            Additional keyword arguments for specifying halo properties.
 
         Returns
         -------
         dtype, numpy array of dtype
             The number of halos at each input scale factor
+
         """
         counts = np.zeros(len(self.scales))
         argsin = []
 
-        N_halo = self.list(scale="all", **kwargs)["scale"].value_counts().sort_index()
+        n_halo = self.list(scale="all", **kwargs)["scale"].value_counts().sort_index()
 
         for i, a in enumerate(self.scales):
-            if np.isin(a, N_halo.index):
+            if np.isin(a, n_halo.index):
                 argsin += [i]
-        counts[argsin] = N_halo.values
+        counts[argsin] = n_halo.values
         if target_scales is None:
             target_scales = self.scales
         target_scales = np.atleast_1d(target_scales)
         func = interp1d(self.scales, counts)
         return func(target_scales).astype(dtype)
 
-    def find_mergers(self, enforce_positive_MR=True):
-        """Create a list of all halo mergers in the tree in terms of descendant, main progenitor, minor progenitor and compute the mass ratio.
+    def find_mergers(self, enforce_positive_mr=True):
+        """Create a list of all halo mergers in the tree.
+
+        Mergers are specified in terms of descendant, main progenitor, minor progenitor and compute
+        the mass ratio.
 
         Parameters
         ----------
-        enforce_positive_MR : bool, optional
+        enforce_positive_mr : bool, optional
             swap main and minor galaxy progenitors to ensure mass rato > 1, by default True
 
         Returns
         -------
         pandas.DataFame
             DataFrame of halo mergers
+
         """
         print("Making merger list from halo trees")
         # Initialise dataframe of merging events
@@ -316,9 +323,9 @@ class halo_trees:
         true_desc_mask = self.trees.loc[possible_progs["descid"]]["upid"] != 0
         true_desc = self.trees.loc[true_desc_mask.loc[true_desc_mask.values].index]
 
-        mergers["Minor_mvir"] = possible_progs.loc[
-            possible_progs["descid"].isin(true_desc.index)
-        ]["mvir"].copy()
+        mergers["Minor_mvir"] = possible_progs.loc[possible_progs["descid"].isin(true_desc.index)][
+            "mvir"
+        ].copy()
         mergers["Minor_ID"] = mergers.index.values
         mergers.reset_index(inplace=True, drop=True)
         mergers["Desc_ID"] = true_desc["upid"].values
@@ -330,8 +337,7 @@ class halo_trees:
 
         # Find coprogenitor properties
         main_progs = possible_progs.loc[
-            (possible_progs["mmp"] == 1)
-            & possible_progs.descid.isin(mergers["Desc_ID"])
+            (possible_progs["mmp"] == 1) & possible_progs.descid.isin(mergers["Desc_ID"])
         ]
         main_progs.reset_index(inplace=True)
         main_progs.set_index("descid", inplace=True)
@@ -343,17 +349,13 @@ class halo_trees:
         mergers["Main_mvir"] = self.trees.loc[mergers["Main_ID"].values]["mvir"].values
 
         # Enforce M1 >= M2
-        if enforce_positive_MR:
+        if enforce_positive_mr:
             swap = mergers["Main_mvir"] < mergers["Minor_mvir"]
-            mergers.loc[
-                swap, ["Main_ID", "Main_mvir", "Minor_ID", "Minor_mvir"]
-            ] = mergers.loc[
+            mergers.loc[swap, ["Main_ID", "Main_mvir", "Minor_ID", "Minor_mvir"]] = mergers.loc[
                 swap, ["Minor_ID", "Minor_mvir", "Main_ID", "Main_mvir"]
             ].values
         # compute mass ratio
         mergers["MR"] = 10 ** (mergers["Main_mvir"] - mergers["Minor_mvir"])
-        mergers[["Main_ID", "Minor_ID"]] = mergers[["Main_ID", "Minor_ID"]].astype(
-            "int"
-        )
+        mergers[["Main_ID", "Minor_ID"]] = mergers[["Main_ID", "Minor_ID"]].astype("int")
 
         return mergers

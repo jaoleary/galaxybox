@@ -1,43 +1,41 @@
 """Classes for handling Emerge galaxy merger tree data."""
-from galaxybox.utils.functions import arg_parser
-from galaxybox.mock_observables import lightcone
 
-from astropy import cosmology as apcos
-from astropy import constants as apconst
+import os
+import warnings
+from typing import Sequence, Union
 
-from halotools.mock_observables import radial_distance_and_velocity
-
+import h5py
 import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-
-from tqdm.auto import tqdm
-from scipy.interpolate import interp1d
 import numpy as np
 import pandas as pd
-import os
-import h5py
-import warnings
+from astropy import constants as apconst
+from astropy import cosmology as apcos
+from halotools.mock_observables import radial_distance_and_velocity
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from scipy.interpolate import interp1d
+from tqdm.auto import tqdm
 
-__author__ = ("Joseph O'Leary",)
+from galaxybox.mock_observables import lightcone
+from galaxybox.utils.functions import arg_parser
 
 
-class galaxy_trees:
-    """A class for reading in and operating on Emerge galaxy merger trees
-    alone or within the context of a Universe.
-    """
+class GalaxyTrees:
+    """A class for reading in and operating on Emerge galaxy merger trees."""
+
     OutputMassThreshold = 7
 
-    def __init__(self, trees_path, add_attrs=None, **kwargs):
-        """Initialize a galaxy_trees object
+    def __init__(self, trees_path: Union[str, list[str]], add_attrs=None, **kwargs):
+        """Initialize a galaxy_trees object.
 
         Parameters
         ----------
         trees_path : string or list of strings
             A list of tree files to be included into the class.
         add_attrs : dict, optional
-            A dictionary of additonal attributes to be attach to the class, by default None
-        fields_out : list of strings, optional
-            tree columns to be read in, by default None
+            A dictionary of additional attributes to be attached to the class, by default None
+        **kwargs : dict
+            Additional keyword arguments.
+
         """
         self.trees_used = trees_path
 
@@ -82,47 +80,44 @@ class galaxy_trees:
             self._leaf = False
 
     def __repr__(self):
-        """pass through the pandas dataframe __repr__"""
+        """Pass through the pandas dataframe __repr__."""
         # TODO: there is likely a more informative usage of this method.
         return repr(self.trees)
 
     # TODO: the `add` approach for class start up is bad. switch to using properties...
     @classmethod
-    def from_universe(cls, Universe):
-        """Initiate a `galaxy_tree` within the `Universe` class
+    def from_universe(cls, universe):
+        """Initiate a `galaxy_tree` within the `Universe` class.
 
         Parameters
         ----------
-        Universe : `galaxybox.Universe`
+        universe : `galaxybox.Universe`
             The outer universe class used to organize these galaxy trees
 
         Returns
         -------
         galaxybox.galaxy_trees
             galaxy trees set from the universe
+
         """
         add = {
-            "out_dir": Universe.out_dir,
-            "fig_dir": Universe.fig_dir,
-            "NumFiles": Universe.params.get_param("NumFilesInParallel"),
-            "ModelName": Universe.params.get_param("ModelName"),
-            "BoxSize": Universe.params.get_param("BoxSize"),
-            "UnitTime_in_yr": Universe.params.get_param("UnitTime_in_yr"),
-            "Fraction_Escape_ICM": Universe.params.get_param("Fraction_Escape_ICM"),
-            "OutputMassThreshold": Universe.params.get_param("OutputMassThreshold"),
-            "TreeRootRedshift": Universe.params.get_param("TreeRootRedshift"),
-            "cosmology": Universe.cosmology,
+            "out_dir": universe.out_dir,
+            "fig_dir": universe.fig_dir,
+            "NumFiles": universe.params.get_param("NumFilesInParallel"),
+            "ModelName": universe.params.get_param("ModelName"),
+            "BoxSize": universe.params.get_param("BoxSize"),
+            "UnitTime_in_yr": universe.params.get_param("UnitTime_in_yr"),
+            "Fraction_Escape_ICM": universe.params.get_param("Fraction_Escape_ICM"),
+            "OutputMassThreshold": universe.params.get_param("OutputMassThreshold"),
+            "TreeRootRedshift": universe.params.get_param("TreeRootRedshift"),
+            "cosmology": universe.cosmology,
         }
         trees_path = []
-        for i in range(Universe.params.get_param("NBoxDivisions") ** 3):
-            if Universe.params.get_param("OutputFormat") == 1:
-                trees_path.append(
-                    os.path.join(Universe.out_dir, "trees/tree.{:d}.out".format(i))
-                )
+        for i in range(universe.params.get_param("NBoxDivisions") ** 3):
+            if universe.params.get_param("OutputFormat") == 1:
+                trees_path.append(os.path.join(universe.out_dir, "trees/tree.{:d}.out".format(i)))
             else:
-                trees_path.append(
-                    os.path.join(Universe.out_dir, "trees/tree.{:d}.h5".format(i))
-                )
+                trees_path.append(os.path.join(universe.out_dir, "trees/tree.{:d}.h5".format(i)))
         return cls(trees_path, add_attrs=add)
 
     @classmethod
@@ -143,6 +138,7 @@ class galaxy_trees:
         -------
         galaxy_tree
             A galaxy tree object
+
         """
         # TODO: this whole method needs some cleanup
         # TODO: set this to work with ascii trees aswell
@@ -165,7 +161,7 @@ class galaxy_trees:
             "NumFiles": attrs["NTreeFiles"],
             "ModelName": attrs["Model Name"].astype(str),
             "BoxSize": attrs["BoxSize"] * attrs["HubbleParameter"],
-            "UnitTime_in_yr": 1000000000.0,  #! Having this hardcoded is a terrible idea...I'll deal with it later.
+            "UnitTime_in_yr": 1000000000.0,  #! Having this hardcoded is a terrible idea...
             "OutputMassThreshold": attrs["Tree_root_mass"],
             "TreeRootRedshift": attrs["Tree_root_redshift"],
             "cosmology": cosmo,
@@ -175,8 +171,8 @@ class galaxy_trees:
             trees_path.append(os.path.join(tree_dir, "tree.{:d}.h5".format(i)))
         return cls(trees_path, add_attrs=add, fields_out=fields_out)
 
-    def climb_tree(self, igal, idx=0, G_mask=None, main_branch=True, progenitors=False):
-        """Recursive function for climbing merger trees
+    def climb_tree(self, igal, idx=0, g_mask=None, main_branch=True, progenitors=False):
+        """Recursive function for climbing merger trees.
 
         Parameters
         ----------
@@ -184,7 +180,7 @@ class galaxy_trees:
             The ID of the root galaxy in the tree.
         idx : int
             Current linear index in the tree (the order in which the tree was walked).
-        G_mask : type
+        g_mask : type
             Description of parameter `G_mask` (the default is None).
         main_branch : bool
             Whether to traverse the main branch during tree climb (the default is True).
@@ -199,29 +195,29 @@ class galaxy_trees:
 
         """
         idx += 1
-        if G_mask is not None:
-            G_mask[idx - 1] = igal
+        if g_mask is not None:
+            g_mask[idx - 1] = igal
 
         if progenitors:
             if self.trees.loc[igal]["Coprog_ID"] > 0:
-                idx, G_mask = self.climb_tree(
+                idx, g_mask = self.climb_tree(
                     int(self.trees.loc[igal]["Coprog_ID"]),
                     idx=idx,
-                    G_mask=G_mask,
+                    G_mask=g_mask,
                     main_branch=main_branch,
                     progenitors=progenitors,
                 )
         if main_branch:
             if self.trees.loc[igal]["MMP_ID"] > 0:
-                idx, G_mask = self.climb_tree(
+                idx, g_mask = self.climb_tree(
                     int(self.trees.loc[igal]["MMP_ID"]),
                     idx=idx,
-                    G_mask=G_mask,
+                    G_mask=g_mask,
                     main_branch=main_branch,
                     progenitors=progenitors,
                 )
 
-        return idx, G_mask
+        return idx, g_mask
 
     def tree(self, igal, root=False, unsort=False):
         """Return the merger tree for a galaxy with ID `igal`.
@@ -233,7 +229,8 @@ class galaxy_trees:
         root : bool
             Whether this galaxy is at the file root output redshift. (the default is False).
         unsort : bool
-            If using sorted IDs, setting unsort true will return the tree sorted by descending scalefactor (the default is False).
+            If using sorted IDs, setting unsort true will return the tree sorted by descending
+            scalefactor (the default is False).
 
         Returns
         -------
@@ -248,9 +245,7 @@ class galaxy_trees:
                         igal : self.trees.loc[igal]["Leaf_ID"].astype(int)
                     ].sort_values("Scale", ascending=False)
                 else:
-                    return self.trees.loc[
-                        igal : self.trees.loc[igal]["Leaf_ID"].astype(int)
-                    ]
+                    return self.trees.loc[igal : self.trees.loc[igal]["Leaf_ID"].astype(int)]
             else:
                 return self.trees.loc[
                     np.arange(igal, self.trees.loc[igal]["Leaf_ID"].astype(int) + 1)
@@ -258,16 +253,12 @@ class galaxy_trees:
         else:
             if root:
                 return self.trees.iloc[
-                    self._roots_idx.loc[igal]["root_idx"] : self._roots_idx.loc[igal][
-                        "leaf_idx"
-                    ]
+                    self._roots_idx.loc[igal]["root_idx"] : self._roots_idx.loc[igal]["leaf_idx"]
                 ]
             else:
-                N, _ = self.climb_tree(igal, main_branch=True, progenitors=True)
-                mask = np.zeros(N).astype(int)
-                N, mask = self.climb_tree(
-                    igal, G_mask=mask, main_branch=True, progenitors=True
-                )
+                n, _ = self.climb_tree(igal, main_branch=True, progenitors=True)
+                mask = np.zeros(n).astype(int)
+                n, mask = self.climb_tree(igal, G_mask=mask, main_branch=True, progenitors=True)
 
                 return self.trees.loc[mask]
 
@@ -285,6 +276,7 @@ class galaxy_trees:
         -------
         pandas.Dataframe
             Main branch
+
         """
         if self._leaf:
             tree = self.tree(igal)
@@ -332,15 +324,13 @@ class galaxy_trees:
                     i += 1
                 return mb[mask]
             else:
-                N, _ = self.climb_tree(igal, main_branch=True, progenitors=False)
-                mask = np.zeros(N).astype(int)
-                N, mask = self.climb_tree(
-                    igal, G_mask=mask, main_branch=True, progenitors=False
-                )
+                n, _ = self.climb_tree(igal, main_branch=True, progenitors=False)
+                mask = np.zeros(n).astype(int)
+                _, mask = self.climb_tree(igal, G_mask=mask, main_branch=True, progenitors=False)
                 return self.trees.loc[mask]
 
     def main_branch_progenitors(self, igal, mmp=True, sat=True, **kwargs):
-        """Return the progenitors of all mergers occuring along the main branch of galaxy with ID `igal`.
+        """Return the progenitors of all mergers occuring along the main branch of galaxy at`igal`.
 
         Parameters
         ----------
@@ -350,6 +340,8 @@ class galaxy_trees:
             if True return most massive progenitors along main branch, default True
         sat : bool, optional
             if True return satellites merging onto the main branch, default True
+        **kwargs : dict, optional
+            Additional keyword arguments.
 
         Returns
         -------
@@ -363,28 +355,27 @@ class galaxy_trees:
         if mmp and sat:
             return tree.loc[tree["Desc_ID"].isin(main_desc.index)]
         elif mmp:
-            return tree.loc[
-                (tree["Desc_ID"].isin(main_desc.index)) & (tree["MMP"] == 1)
-            ]
+            return tree.loc[(tree["Desc_ID"].isin(main_desc.index)) & (tree["MMP"] == 1)]
         elif sat:
-            return tree.loc[
-                (tree["Desc_ID"].isin(main_desc.index)) & (tree["MMP"] == 0)
-            ]
+            return tree.loc[(tree["Desc_ID"].isin(main_desc.index)) & (tree["MMP"] == 0)]
         else:
             raise Exception("must specify atleast one progenitor type.")
 
     def mass_weighted_mass_ratio(self, igal, **kwargs):
-        """Compute the mass-weighted mass-ratio for galaxy with ID `igal`
+        """Compute the mass-weighted mass-ratio for galaxy with ID `igal`.
 
         Parameters
         ----------
         igal : int
             The ID of the galaxy in the tree.
+        **kwargs : dict, optional
+            Additional keyword arguments.
 
         Returns
         -------
         float
             The mass weighted mass ratio
+
         """
         progs = self.main_branch_progenitors(igal, **kwargs)
         sats = progs.loc[progs["MMP"] == 0]
@@ -394,10 +385,7 @@ class galaxy_trees:
         for i, gal in enumerate(sats.to_records(index=False)):
             sat_mass = 10 ** gal["Stellar_mass"]
             numerator += ((sat_mass) ** 2) / (
-                10
-                ** np.float(
-                    mains.loc[mains["Desc_ID"] == gal["Desc_ID"]]["Stellar_mass"]
-                )
+                10 ** np.float(mains.loc[mains["Desc_ID"] == gal["Desc_ID"]]["Stellar_mass"])
             )
             denominator += sat_mass
 
@@ -406,8 +394,42 @@ class galaxy_trees:
         else:
             return float(1 / (numerator / denominator))
 
-    def exsitu_mass(self, igal, frac=None, min_MR=1, max_MR=np.inf, **kwargs):
-        """Compute the exsitu mass fraction at the root redshift"""
+    def exsitu_mass(
+        self, igal: int, frac: float = None, min_mr: float = 1, max_mr=np.inf, **kwargs
+    ) -> float:
+        """Compute the exsitu mass fraction at the root redshift.
+
+        Parameters
+        ----------
+        igal : int
+            Index of the galaxy.
+        frac : float, optional
+            Fraction of exsitu mass to compute. If None, returns a tuple with the exsitu mass, the
+            sum of the stellar masses of satellites, and the stellar mass of the galaxy. If "total",
+            returns the exsitu mass fraction. If "exsitu", returns the exsitu mass fraction
+            normalized by the sum of the stellar masses of satellites. Default is None.
+        min_mr : float, optional
+            Minimum mass ratio between the main galaxy and satellite galaxy. Default is 1.
+        max_mr : float, optional
+            Maximum mass ratio between the main galaxy and satellite galaxy. Default is np.inf.
+        **kwargs : dict, optional
+            Additional keyword arguments.
+
+        Returns
+        -------
+        float or tuple
+            If `frac` is None, returns a tuple with the exsitu mass, the sum of the stellar masses
+            of satellites, and the stellar mass of the galaxy.
+            If `frac` is "total", returns the exsitu mass fraction.
+            If `frac` is "exsitu", returns the exsitu mass fraction normalized by the sum of the
+            stellar masses of satellites.
+
+        Raises
+        ------
+        Exception
+            If `frac` is not None, "total", or "exsitu".
+
+        """
         progs = self.main_branch_progenitors(igal, **kwargs)
         sats = progs.loc[progs["MMP"] == 0]
         mains = progs.loc[progs["MMP"] == 1]
@@ -418,17 +440,13 @@ class galaxy_trees:
                 mains.loc[mains["Desc_ID"] == gal["Desc_ID"]]["Stellar_mass"]
             )
             ratio = np.maximum(main_mass / sat_mass, sat_mass / main_mass)
-            if (ratio >= min_MR) and (ratio < max_MR):
-                exsitu_mass += (10 ** gal["Stellar_mass_root"]) * (
-                    1 - self.Fraction_Escape_ICM
-                )
+            if (ratio >= min_mr) and (ratio < max_mr):
+                exsitu_mass += (10 ** gal["Stellar_mass_root"]) * (1 - self.Fraction_Escape_ICM)
 
         if frac is None:
             return (
                 exsitu_mass,
-                np.sum(
-                    (10 ** sats["Stellar_mass_root"]) * (1 - self.Fraction_Escape_ICM)
-                ),
+                np.sum((10 ** sats["Stellar_mass_root"]) * (1 - self.Fraction_Escape_ICM)),
                 (10 ** self.trees.loc[igal]["Stellar_mass"]),
             )
         elif frac == "total":
@@ -439,31 +457,35 @@ class galaxy_trees:
             )
         else:
             raise Exception(
-                'frac must be either "total" for total stellar mass, or "exsitu" for total exsitu mass.'
+                "frac must be either 'total' for total stellar mass, or 'exsitu' for total exsitu "
+                "mass."
             )
 
     def count_mergers(
-        self, igal, min_MR=1, max_MR=np.inf, min_z=0, max_z=np.inf, **kwargs
+        self, igal: int, min_mr: float = 1, max_mr: float = np.inf, min_z=0, max_z=np.inf, **kwargs
     ):
-        """Count the number of mergers along the main branch of galaxy with  ID `igal`
+        """Count the number of mergers along the main branch of galaxy with  ID `igal`.
 
         Parameters
         ----------
         igal : int
             The ID of the galaxy in the tree.
-        min_MR : float, optional
+        min_mr : float, optional
             The minimum mass ratio to consider for mergers, by default 1
-        max_MR : float, optional
+        max_mr : float, optional
             The maximum mass ratio to consider for mergers, by default np.inf
         min_z : int, optional
             The minimum redshift to consider for mergers, by default 0
         max_z : float, optional
             The maximum redshift to consider for mergers, by default np.inf
+        **kwargs : dict, optional
+            Additional keyword arguments.
 
         Returns
         -------
         N_mergers : int
             Number of mergers
+
         """
         mb = self.main_branch(igal)
         progs = self.main_branch_progenitors(igal, **kwargs)
@@ -501,7 +523,7 @@ class galaxy_trees:
             else:
                 max_time = mb.iloc[last_quench]["Age"]
 
-        N_mergers = 0
+        n_mergers = 0
         for i, gal in enumerate(sats.to_records(index=False)):
             sat_mass = 10 ** gal["Stellar_mass"]
             main_mass = 10 ** np.float(
@@ -509,14 +531,14 @@ class galaxy_trees:
             )
             ratio = np.maximum(main_mass / sat_mass, sat_mass / main_mass)
             if (
-                (ratio >= min_MR)
-                and (ratio < max_MR)
+                (ratio >= min_mr)
+                and (ratio < max_mr)
                 and (gal["tdf"] >= min_time)
                 and (gal["tdf"] < max_time)
             ):
-                N_mergers += 1
+                n_mergers += 1
 
-        return N_mergers
+        return n_mergers
 
     def alias(self, key):
         """Return proper coloumn key for input alias key.
@@ -530,6 +552,7 @@ class galaxy_trees:
         -------
         str
             The proper column name for the input alias
+
         """
         # first lets make all columns case insensitive
         colnames = list(self.trees.keys())
@@ -579,17 +602,20 @@ class galaxy_trees:
                 return k
         raise KeyError("`{}` has no known alias.".format(key))
 
-    def list(self, mask_only=False, **kwargs):
+    def list(self, mask_only: bool = False, **kwargs):
         """Return list of galaxy with specified properties.
 
-        This function selects galaxies based on a flexible set of arguments. Any column of the galaxy.trees attribute can
-        have a `min` are `max` added as a prefix or suffix to the column name or alias of the column name and passed as
-        and argument to this function. This can also be used to selected galaxies based on derived properties such as color.
+        This function selects galaxies based on a flexible set of arguments. Any column of the
+        galaxy.trees attribute can have a `min` are `max` added as a prefix or suffix to the column
+        name or alias of the column name and passed as and argument to this function. This can also
+        be used to selected galaxies based on derived properties such as color.
 
         Parameters
         ----------
         mask_only : bool, optional
             Return the dataframe, or a mask for the dataframe, by default False
+        **kwargs : dict
+            Additional keyword arguments for selecting galaxies based on column values.
 
         Returns
         -------
@@ -597,18 +623,13 @@ class galaxy_trees:
             A masked subset of the galaxy.trees attribute
 
         # TODO: expand this docstring and add examples.
+
         """
         # First clean up kwargs, replace aliases
         keys = list(kwargs.keys())
         for i, kw in enumerate(keys):
             keyl = kw.lower()
-            key = (
-                keyl.lower()
-                .replace("min", "")
-                .replace("max", "")
-                .lstrip("_")
-                .rstrip("_")
-            )
+            key = keyl.lower().replace("min", "").replace("max", "").lstrip("_").rstrip("_")
             new_key = kw.replace(key, self.alias(key))
             kwargs[new_key] = kwargs.pop(kw)
 
@@ -689,7 +710,7 @@ class galaxy_trees:
         else:
             return galaxy_list.loc[mask]
 
-    def count(self, target_scales=None, dtype=int, **kwargs):
+    def count(self, target_scales: Union[float, Sequence[float]] = None, dtype=int, **kwargs):
         """Count the number of galaxies at specified scalefactor(s).
 
         Parameters
@@ -698,21 +719,24 @@ class galaxy_trees:
             Scale factors at which a galaxy count should be performed, by default None
         dtype : data type, optional
             interpolated values will be cast into this type, by default int
+        **kwargs : dict
+            Additional keyword arguments for use in the `list` method.
 
         Returns
         -------
         dtype, numpy array of dtype
             The number of galaxies at each input scale factor
+
         """
         counts = np.zeros(len(self.scales))
         argsin = []
 
-        N_gal = self.list(z="all", **kwargs)["Scale"].value_counts().sort_index()
+        n_gal = self.list(z="all", **kwargs)["Scale"].value_counts().sort_index()
 
         for i, a in enumerate(self.scales):
-            if np.isin(a, N_gal.index):
+            if np.isin(a, n_gal.index):
                 argsin += [i]
-        counts[argsin] = N_gal.values
+        counts[argsin] = n_gal.values
         if target_scales is None:
             target_scales = self.scales
         target_scales = np.atleast_1d(target_scales)
@@ -722,18 +746,22 @@ class galaxy_trees:
     def find_mergers(
         self,
         enforce_mass_threshold=True,
-        enforce_positive_MR=True,
+        enforce_positive_mr=True,
         use_obs=False,
         desc_mass_correction=False,
         dropna=True,
     ):
-        """Create a list of all galaxy mergers in the tree in terms of descendant, main progenitor, minor progenitor and compute the mass ratio.
+        """Create a list of all galaxy mergers.
+
+        Create a list of all galaxy mergers  in the tree in terms of descendant, main progenitor,
+        minor progenitor and compute the mass ratio.
 
         Parameters
         ----------
         enforce_mass_threshold : bool, optional
-            Exclude mergers where any galaxy component is below the massthreshold set in the parameterfile, by default True
-        enforce_positive_MR : bool, optional
+            Exclude mergers where any galaxy component is below the massthreshold set in the
+            parameterfile, by default True
+        enforce_positive_mr : bool, optional
             swap main and minor galaxy progenitors to ensure mass rato > 1, by default True
         use_obs : bool, optional
             whether to use quantities with observational scatter as the default, by default False
@@ -746,6 +774,7 @@ class galaxy_trees:
         -------
         pandas.DataFame
             DataFrame of galaxy mergers
+
         """
         print("Making merger list from trees")
         if use_obs:
@@ -785,19 +814,16 @@ class galaxy_trees:
 
         # find merging systems
         minor_progs = self.trees.loc[(self.trees["Flag"] == 1)]
-        missing_desc = minor_progs.loc[
-            ~minor_progs.Desc_ID.isin(self.trees.index.values).values
-        ]
+        missing_desc = minor_progs.loc[~minor_progs.Desc_ID.isin(self.trees.index.values).values]
         if len(missing_desc) > 0:
-            # this can happen close to the mass threshold or if the main progenitor is stripped in the next timestep.
+            # this can happen close to the mass threshold or if the main progenitor is stripped in t
+            # he next timestep.
             warnings.warn(
                 "Could not find descendant for galaxies with index {}".format(
                     missing_desc.index.values
                 )
             )
-        minor_progs = minor_progs.loc[
-            minor_progs.Desc_ID.isin(self.trees.index.values).values
-        ]
+        minor_progs = minor_progs.loc[minor_progs.Desc_ID.isin(self.trees.index.values).values]
         mergers[
             [
                 "Desc_ID",
@@ -884,9 +910,7 @@ class galaxy_trees:
                 )
 
             duplicate_ids = mergers[mergers["Desc_ID"].duplicated()]
-            non_binary = mergers.loc[
-                mergers.Desc_ID.isin(duplicate_ids.Desc_ID.unique())
-            ]
+            non_binary = mergers.loc[mergers.Desc_ID.isin(duplicate_ids.Desc_ID.unique())]
             for row in non_binary.itertuples():
                 mergers.at[row.Index, "Desc_mstar"] = nonbinary_correction(row.Index)
 
@@ -900,7 +924,7 @@ class galaxy_trees:
             mergers.drop(mergers[low_mass_mask].index, inplace=True)
 
         # Enforce M1 >= M2
-        if enforce_positive_MR:
+        if enforce_positive_mr:
             swap = mergers["Main_mstar" + add_obs] < mergers["Minor_mstar" + add_obs]
             mergers.loc[
                 swap,
@@ -941,14 +965,12 @@ class galaxy_trees:
             ].values
         # compute mass ratio
         mergers["MR"] = 10 ** (mergers["Main_mstar"] - mergers["Minor_mstar"])
-        mergers["MR_obs"] = 10 ** (
-            mergers["Main_mstar_obs"] - mergers["Minor_mstar_obs"]
-        )
+        mergers["MR_obs"] = 10 ** (mergers["Main_mstar_obs"] - mergers["Minor_mstar_obs"])
 
         return mergers
 
     def sort_index(self):
-        """Sort galaxy trees by ID (ascending)
+        """Sort galaxy trees by ID (ascending).
 
         ID sorting allows for faster retreival of individual galaxy trees/growth history.
         Sorting is particularly helpful for galaxies that arent a root.
@@ -958,12 +980,8 @@ class galaxy_trees:
             self.sorted = True
             del self._roots_idx
             self._roots_mask = self.trees["Scale"] == self.trees["Scale"].max()
-            self._roots_idx = pd.DataFrame(
-                index=self.trees.loc[self._roots_mask].index
-            )
-            self._roots_idx["root_idx"] = np.argwhere(
-                self._roots_mask.values
-            ).flatten()
+            self._roots_idx = pd.DataFrame(index=self.trees.loc[self._roots_mask].index)
+            self._roots_idx["root_idx"] = np.argwhere(self._roots_mask.values).flatten()
             self._roots_idx["leaf_idx"] = self._roots_idx["root_idx"] + np.append(
                 np.diff(self._roots_idx["root_idx"]),
                 (len(self.trees) - 1 - self._roots_idx["root_idx"].iloc[-1]),
@@ -978,7 +996,8 @@ class galaxy_trees:
                 )
         else:
             print(
-                "...Im not going to sort because you dont have leaves, so you probably dont have the correct ID format....so there is nothing to gain from a sort"
+                "...Im not going to sort because you dont have leaves, so you probably dont have "
+                "the correct ID format....so there is nothing to gain from a sort"
             )
 
     def make_lightcone_catalog(
@@ -990,7 +1009,7 @@ class galaxy_trees:
         fuzzy_bounds=False,
         method="KW07",
         lean=True,
-        **kwargs
+        **kwargs,
     ):
         """Construct a galaxy catalog with lightcone geometry.
 
@@ -1001,15 +1020,21 @@ class galaxy_trees:
         max_z : float, optional
             Minimum galaxy redshift, by default None
         randomize : bool, optional
-            If True box tesellations will have a random axis rotation and translation applied before selecting galaxies, by default False
+            If True box tesellations will have a random axis rotation and translation applied before
+            selecting galaxies, by default False
         seed : int, optional
             Randomization seed, by default None
         fuzzy_bounds : bool, optional
-            If `True` satellite galaxies extending beyond snapshot range will be included if their host is within the snapshot range., by default False
+            If `True` satellite galaxies extending beyond snapshot range will be included if their
+            host is within the snapshot range., by default False
         method : str, optional
             Lightcone construction method, by default 'KW07'
         lean : bool, optional
-            If True only a limited data set is returned that should be linked to the galaxy trees, by default True
+            If True only a limited data set is returned that should be linked to the galaxy trees,
+            by default True
+        **kwargs : dict
+            Additional keyword arguments for use in the `list` method.
+
 
         Returns
         -------
@@ -1020,27 +1045,29 @@ class galaxy_trees:
             The lightcone object
         tuple
             A tuple containing the min_z, max_z arguments
+
         """
         # TODO: This entire method could use some reworking and cleanup.
         if method == "KW07":
-            LC_kwargs, kwargs = arg_parser(lightcone.KW07, drop=True, **kwargs)
-            LC = lightcone.KW07(**LC_kwargs, Lbox=self.BoxSize / self.cosmology.h)
+            lc_kwargs, kwargs = arg_parser(lightcone.KW07, drop=True, **kwargs)
+            lc = lightcone.KW07(**lc_kwargs, Lbox=self.BoxSize / self.cosmology.h)
         elif method == "full_width":
-            LC_kwargs, kwargs = arg_parser(lightcone.full_width, drop=True, **kwargs)
-            LC = lightcone.full_width(Lbox=self.BoxSize / self.cosmology.h, **LC_kwargs)
+            lc_kwargs, kwargs = arg_parser(lightcone.full_width, drop=True, **kwargs)
+            lc = lightcone.full_width(Lbox=self.BoxSize / self.cosmology.h, **lc_kwargs)
         elif method == "hybrid":
-            LC_kwargs, kwargs = arg_parser(lightcone.hybrid, drop=True, **kwargs)
-            LC = lightcone.hybrid(Lbox=self.BoxSize / self.cosmology.h, **LC_kwargs)
+            lc_kwargs, kwargs = arg_parser(lightcone.hybrid, drop=True, **kwargs)
+            lc = lightcone.hybrid(Lbox=self.BoxSize / self.cosmology.h, **lc_kwargs)
         else:
             raise NotImplementedError(
-                "Only the 'KW07', 'full_width' and 'hybrid' cone methods have been implemented at this time"
+                "Only the 'KW07', 'full_width' and 'hybrid' cone methods have been implemented at "
+                "this time"
             )
 
         if seed is not None:
-            LC.set_seed(seed)
+            lc.set_seed(seed)
 
-        D = self.cosmology.comoving_distance(1 / self.scales - 1).value[::-1]
-        LC.set_snap_distances(D)
+        d = self.cosmology.comoving_distance(1 / self.scales - 1).value[::-1]
+        lc.set_snap_distances(d)
         if max_z is None:
             max_z = 1 / self.scales.min() - 1
         if min_z is None:
@@ -1048,22 +1075,21 @@ class galaxy_trees:
 
         z = np.linspace(min_z, max_z, 1000000)
         d = self.cosmology.comoving_distance(z).value
-        redshift_at_D = interp1d(d, z)
+        redshift_at_d = interp1d(d, z)
 
-        D_min = self.cosmology.comoving_distance(min_z).value
-        D_max = self.cosmology.comoving_distance(max_z).value
-        vert = LC.tesselate(D_min, D_max)
+        d_min = self.cosmology.comoving_distance(min_z).value
+        d_max = self.cosmology.comoving_distance(max_z).value
+        vert = lc.tesselate(d_min, d_max)
         snapshots = self.snapshots[::-1]
-        redshifts = 1 / self.scales[::-1] - 1
 
         # loop over all tesselations that intersect lightcone
         for i, og in enumerate(tqdm(vert)):
-            snap_arg = LC.get_snapshots(og)
-            bc = LC.get_boxcoord(og)
+            snap_arg = lc.get_snapshots(og)
+            bc = lc.get_boxcoord(og)
 
             # loop over all snapshots available to this volume
             for j, sa in enumerate(snap_arg):
-                smin, smax = LC.snapshot_extent(sa)
+                smin, smax = lc.snapshot_extent(sa)
                 if lean:
                     # if lean is true, only save the minmumn information necessary
                     # TODO: this could be cut down even futher but I'll deal with that later.
@@ -1088,19 +1114,17 @@ class galaxy_trees:
                 if len(galaxies) == 0:
                     continue
 
-                galaxies[["X_pos", "Y_pos", "Z_pos"]] = LC.transform_position(
+                galaxies[["X_pos", "Y_pos", "Z_pos"]] = lc.transform_position(
                     pos=galaxies[["X_pos", "Y_pos", "Z_pos"]],
                     randomize=randomize,
                     box_coord=bc,
                 )
                 if randomize:
-                    galaxies[["X_vel", "Y_vel", "Z_vel"]] = LC.transform_velocity(
+                    galaxies[["X_vel", "Y_vel", "Z_vel"]] = lc.transform_velocity(
                         vel=galaxies[["X_vel", "Y_vel", "Z_vel"]], box_coord=bc
                     )
 
-                mask = LC.contained(
-                    galaxies[["X_pos", "Y_pos", "Z_pos"]], mask_only=True
-                )
+                mask = lc.contained(galaxies[["X_pos", "Y_pos", "Z_pos"]], mask_only=True)
                 galaxies = galaxies.loc[mask]
                 galaxies[
                     [
@@ -1133,10 +1157,10 @@ class galaxy_trees:
                         "Dec",
                     ]
                 )
-                galaxies[["X_cone", "Y_cone", "Z_cone"]] = LC.cone_cartesian(
+                galaxies[["X_cone", "Y_cone", "Z_cone"]] = lc.cone_cartesian(
                     galaxies[["X_pos", "Y_pos", "Z_pos"]]
                 )
-                galaxies[["X_cvel", "Y_cvel", "Z_cvel"]] = LC.cone_cartesian(
+                galaxies[["X_cvel", "Y_cvel", "Z_cvel"]] = lc.cone_cartesian(
                     galaxies[["X_vel", "Y_vel", "Z_vel"]]
                 )
 
@@ -1154,14 +1178,7 @@ class galaxy_trees:
                         galaxies["Y_vel"].values,
                         galaxies["Z_vel"].values,
                     )
-                    xc, yc, zc, vxc, vyc, vzc = (
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                    )  # stationary observer at [0,0,0]
+                    xc, yc, zc, vxc, vyc, vzc = (0, 0, 0, 0, 0, 0)  # stationary observer at [0,0,0]
                     (
                         galaxies["R_dist"],
                         galaxies["R_vel"],
@@ -1172,8 +1189,8 @@ class galaxy_trees:
                 glist = galaxies.copy()  # everything at this snapshot
                 # cut out the right radial extent
 
-                mask = (galaxies["R_dist"] >= np.max([smin, D_min])) & (
-                    galaxies["R_dist"] < np.min([smax, D_max])
+                mask = (galaxies["R_dist"] >= np.max([smin, d_min])) & (
+                    galaxies["R_dist"] < np.min([smax, d_max])
                 )
                 galaxies = galaxies.loc[mask]
 
@@ -1183,41 +1200,36 @@ class galaxy_trees:
                     # check if there are any main galaxies
                     if len(mains) > 0:
                         mains = mains.loc[
-                            (mains["R_dist"].values + mains["Halo_radius"].values)
-                            > smax
+                            (mains["R_dist"].values + mains["Halo_radius"].values) > smax
                         ]
                         # do any of these extend over the boundary
                         if len(mains) > 0:
                             sats = glist.loc[glist["Up_ID"].isin(mains.index.values)]
-                            mask = (sats["R_dist"] >= smax) & (sats["R_dist"] < D_max)
+                            mask = (sats["R_dist"] >= smax) & (sats["R_dist"] < d_max)
                             # Add those satellites to the galaxy list.
                             galaxies = pd.concat([galaxies, sats.loc[mask]])
 
                 # Add columnes for lightcone coordinates and apparent redshift
-                galaxies[["RA", "Dec"]] = LC.ang_coords(
-                    galaxies[["X_pos", "Y_pos", "Z_pos"]]
-                )
-                galaxies["Redshift"] = galaxies["R_dist"].apply(redshift_at_D).values
+                galaxies[["RA", "Dec"]] = lc.ang_coords(galaxies[["X_pos", "Y_pos", "Z_pos"]])
+                galaxies["Redshift"] = galaxies["R_dist"].apply(redshift_at_d).values
                 galaxies["Redshift_obs"] = (
                     galaxies["Redshift"]
-                    + galaxies["R_vel"]
-                    * (1 + galaxies["Redshift"])
-                    / apconst.c.to("km/s").value
+                    + galaxies["R_vel"] * (1 + galaxies["Redshift"]) / apconst.c.to("km/s").value
                 )
 
                 if (i == 0) & (j == 0):
-                    Lightcone_cat = galaxies
+                    lightcone_cat = galaxies
                 else:
-                    Lightcone_cat = pd.concat([Lightcone_cat, galaxies])
+                    lightcone_cat = pd.concat([lightcone_cat, galaxies])
 
-        Lightcone_cat.index.rename(
+        lightcone_cat.index.rename(
             "ID", inplace=True
         )  # this is a safety step incase the first loop turned out no galaxies
-        Lightcone_cat.reset_index(inplace=True)
-        Lightcone_cat.rename(columns={"ID": "Tree_ID"}, inplace=True)
+        lightcone_cat.reset_index(inplace=True)
+        lightcone_cat.rename(columns={"ID": "Tree_ID"}, inplace=True)
         if lean:
             return (
-                Lightcone_cat[
+                lightcone_cat[
                     [
                         "Tree_ID",
                         "Redshift",
@@ -1234,11 +1246,11 @@ class galaxy_trees:
                         "Dec",
                     ]
                 ],
-                LC,
+                lc,
                 (min_z, max_z),
             )
         else:
-            return Lightcone_cat, LC, (min_z, max_z)
+            return lightcone_cat, lc, (min_z, max_z)
 
     def merging_time(self, igal_1, igal_2):
         """Find the cosmic time when two galaxies merge.
@@ -1253,7 +1265,8 @@ class galaxy_trees:
         Returns
         -------
         float
-            The cosmic time when the two input galaxies finally merge. Returns 0 if the galaxies dont ever merge.
+            The cosmic time when the two input galaxies finally merge. Returns 0 if the galaxies
+            dont ever merge.
 
         """
         if self._leaf:
@@ -1272,7 +1285,8 @@ class galaxy_trees:
                 gal_2 = self.trees.loc[igal_2]
 
                 if gal_1.Scale != gal_2.Scale:
-                    # if these galaxies arent on the same timestep check if one is a progenitor of the other
+                    # if these galaxies arent on the same timestep check if one is a progenitor of
+                    # the other
                     if (gal_2.name > gal_1.name) and (gal_2.name <= gal_1.Leaf_ID):
                         # if its along the main branch return scale of gal_1
                         main_branch = self.main_branch(gal_1.name).index.values
@@ -1324,14 +1338,7 @@ class galaxy_trees:
             )
 
     def plot_tree(
-        self,
-        igal,
-        ax=None,
-        x_pos=0.0,
-        min_scale=0.0,
-        spacing=1.0,
-        desc_pos=None,
-        **kwargs
+        self, igal, ax=None, x_pos=0.0, min_scale=0.0, spacing=1.0, desc_pos=None, **kwargs
     ):
         """Create a visual representation for galaxy tree growth.
 
@@ -1349,13 +1356,15 @@ class galaxy_trees:
             x spacing between branches, by default 1.0
         desc_pos : list, optional
             the (x, y) coordinate of the descendant galaxy on the plot, by default None
+        **kwargs : dict
+            Additional keyword arguments for use in the `list` method.
 
         Returns
         -------
         x_pos : int, optional
             New x coordinate for the next galaxy on the plot
-        """
 
+        """
         # some default plotting configs if no external ax is provided.
         if ax is None:
             vmin = self.OutputMassThreshold
@@ -1375,9 +1384,7 @@ class galaxy_trees:
                 bbox_transform=ax.transAxes,
                 borderpad=0,
             )
-            sm = plt.cm.ScalarMappable(
-                cmap=plt.cm.jet, norm=plt.Normalize(vmin=vmin, vmax=vmax)
-            )
+            sm = plt.cm.ScalarMappable(cmap=plt.cm.jet, norm=plt.Normalize(vmin=vmin, vmax=vmax))
             cbar = plt.colorbar(sm, cax=axins, orientation="horizontal")
             cbar.ax.xaxis.set_label_position("top")
             cbar.ax.xaxis.set_ticks_position("top")
@@ -1409,7 +1416,7 @@ class galaxy_trees:
                     min_scale=min_scale,
                     spacing=spacing,
                     desc_pos=[x_pos, scale],
-                    **kwargs
+                    **kwargs,
                 )
             # walk the coprogenitors, no update to desc_pos
             if icoprog > 0:
@@ -1421,13 +1428,13 @@ class galaxy_trees:
                     min_scale=min_scale,
                     spacing=spacing,
                     desc_pos=desc_pos,
-                    **kwargs
+                    **kwargs,
                 )
 
         return x_pos
 
     def scale_at_massfrac(self, igal, frac, interpolate=False):
-        """Determine the scalefactor when a galaxy's mass crossed some fraction of its current mass
+        """Determine the scalefactor when a galaxy's mass crossed some fraction of its current mass.
 
         Parameters
         ----------
@@ -1436,7 +1443,8 @@ class galaxy_trees:
         frac : float
             Target fraction of current galaxy mass
         interpolate : bool, optional
-            If true mass growth is linearly interpolated between simulation time steps, by default False
+            If true mass growth is linearly interpolated between simulation time steps, by default
+            False
 
         Returns
         -------
@@ -1460,23 +1468,19 @@ class galaxy_trees:
             thresh_mask = log_frac < log_thresh
 
             # if threshold is crossed save the id and scale
-            scale[prog_mask & ~thresh_mask] = self.trees.loc[
-                progid[prog_mask & ~thresh_mask]
-            ]["Scale"].values
+            scale[prog_mask & ~thresh_mask] = self.trees.loc[progid[prog_mask & ~thresh_mask]][
+                "Scale"
+            ].values
             igal[prog_mask & ~thresh_mask] = self.trees.loc[
                 progid[prog_mask & ~thresh_mask]
             ].index.values
 
             # otherwise update progs and move on
-            progid[prog_mask] = self.trees.loc[progid[prog_mask]][
-                "MMP_ID"
-            ].values.astype(int)
+            progid[prog_mask] = self.trees.loc[progid[prog_mask]]["MMP_ID"].values.astype(int)
             progid[thresh_mask] = 0
             prog_mask = progid > 0
 
         if interpolate:
-            raise NotImplementedError(
-                "Interpolated growth between timesteps not yet available"
-            )
+            raise NotImplementedError("Interpolated growth between timesteps not yet available")
 
         return scale

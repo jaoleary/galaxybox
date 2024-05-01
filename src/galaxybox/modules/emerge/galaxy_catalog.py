@@ -52,13 +52,13 @@ class GalaxyCatalog:
         self.snapshots = np.sort(np.unique(self.snapshots))[::-1]
         self.snapshots = ["S{:d}".format(s) for s in self.snapshots]
 
-        self.__galaxies = {}
+        self._galaxies = {}
         for i, skey in enumerate(self.snapshots):
             # skey = 'S{:d}'.format(s)
-            self.__galaxies[skey] = {}
-            self.__galaxies[skey]["redshift"] = self.redshifts[i]
+            self._galaxies[skey] = {}
+            self._galaxies[skey]["redshift"] = self.redshifts[i]
             if nfiles > 1:
-                self.__galaxies[skey]["data"] = pd.concat(
+                self._galaxies[skey]["data"] = pd.concat(
                     [
                         read_outputs(
                             ".".join([fbase, skey, "{:d}".format(j), "h5"]), key="Galaxies"
@@ -68,12 +68,12 @@ class GalaxyCatalog:
                     copy=False,
                 )
             else:
-                self.__galaxies[skey]["data"] = read_outputs(
+                self._galaxies[skey]["data"] = read_outputs(
                     ".".join([fbase, skey, "h5"]), key="Galaxies"
                 )
-            if "Halo_ID" in self.__galaxies[skey]["data"].keys():
-                self.__galaxies[skey]["data"].rename(columns={"Halo_ID": "ID"}, inplace=True)
-            self.__galaxies[skey]["data"].set_index("ID", drop=True, inplace=True)
+            if "Halo_ID" in self._galaxies[skey]["data"].keys():
+                self._galaxies[skey]["data"].rename(columns={"Halo_ID": "ID"}, inplace=True)
+            self._galaxies[skey]["data"].set_index("ID", drop=True, inplace=True)
 
     @classmethod
     def from_universe(cls, universe, galaxies_path=None):
@@ -138,8 +138,8 @@ class GalaxyCatalog:
 
         """
         # first lets make all columns case insensitive
-        s = [*self.__galaxies.keys()][0]
-        colnames = list(self.__galaxies[s]["data"].keys())
+        s = [*self._galaxies.keys()][0]
+        colnames = list(self._galaxies[s]["data"].keys())
         col_alias = {}
         for k in colnames:
             col_alias[k] = [k.lower()]
@@ -207,33 +207,33 @@ class GalaxyCatalog:
         # I dont like the implementation of `all` right now.
         # Allowing for specified ranges would be better.
         if "snapshot" in kwargs.keys():
-            redshift = self.__galaxies[kwargs["snapshot"]]["redshift"]
-            galaxy_list = self.__galaxies[kwargs["snapshot"]]["data"]
+            redshift = self._galaxies[kwargs["snapshot"]]["redshift"]
+            galaxy_list = self._galaxies[kwargs["snapshot"]]["data"]
             kwargs.pop("snapshot")
         elif "scale" in kwargs:
             redshift = 1 / kwargs["scale"] - 1
             redshift_arg = (np.abs(self.redshifts - redshift)).argmin()
             s_key = self.snapshots[redshift_arg]
-            redshift = self.__galaxies[s_key]["redshift"]
-            galaxy_list = self.__galaxies[s_key]["data"]
+            redshift = self._galaxies[s_key]["redshift"]
+            galaxy_list = self._galaxies[s_key]["data"]
             kwargs.pop("Scale")
         elif "redshift" in kwargs:
             redshift_arg = (np.abs(self.redshifts - kwargs["redshift"])).argmin()
             s_key = self.snapshots[redshift_arg]
-            redshift = self.__galaxies[s_key]["redshift"]
-            galaxy_list = self.__galaxies[s_key]["data"]
+            redshift = self._galaxies[s_key]["redshift"]
+            galaxy_list = self._galaxies[s_key]["data"]
             kwargs.pop("redshift")
         else:
             s_key = self.snapshots[0]
-            redshift = self.__galaxies[s_key]["redshift"]
-            galaxy_list = self.__galaxies[s_key]["data"]
+            redshift = self._galaxies[s_key]["redshift"]
+            galaxy_list = self._galaxies[s_key]["data"]
 
         # print('Using snapshot {} at z={:.3f}'.format(s_key, redshift))
         # Setup a default `True` mask
         mask = galaxy_list["Up_ID"] > -10
         # Loop of each column in the tree and check if a min/max value mask should be created.
-        for i, key in enumerate(galaxy_list.keys()):
-            for j, kw in enumerate(kwargs.keys()):
+        for key in galaxy_list.keys():
+            for kw in kwargs.keys():
                 if ("obs" in kw.lower()) & ("obs" not in key.lower()):
                     pass
                 elif key.lower() in kw.lower():

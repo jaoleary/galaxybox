@@ -1,19 +1,31 @@
+"""Classes for handling Emerge outputs from fitting."""
+
 import numpy as np
 import pandas as pd
-from IPython.display import display, Math
-
-__author__ = ("Joseph O'Leary",)
+from IPython.display import Math, display
 
 
-class fit:
-    """A class for reading in and operating on Emerge fitting files
-    alone or within the context of a Universe.
+class EmergeFitFile:
+    """A class for reading in and operating on Emerge fitting files.
+
+    Fit files can be read in alone or within the context of the `Universe` class.
+
+    Parameters
+    ----------
+    filepath : str
+        Filepath to the emerge fitting files (plain text output)
+
     """
 
-    # all column names that ARENT model parameters
-    _reserved = ["lnprob", "Temp", "Scale", "Frac_accept", "Step", "Epoch", "iwalker"]
+    def __init__(self, filepath: str):
+        """Initialize the EmergeFitFile class.
 
-    def __init__(self, filepath):
+        Parameters
+        ----------
+        filepath : str
+            Filepath to the emerge fitting files (plain text output)
+
+        """
         self.filepath = filepath
         data = []
         for fp in filepath:
@@ -23,21 +35,37 @@ class fit:
             header = header.split(" ")
             for i, key in enumerate(header):
                 header[i] = key.split(")")[-1]
-            data += [
-                pd.read_csv(
-                    fp, comment="#", delimiter="\s+", engine="python", names=header
-                )
-            ]
+            data += [pd.read_csv(fp, comment="#", delimiter="\s+", engine="python", names=header)]
         self.data = pd.concat(data)
 
-    def _colnames(self, filepath, skiprows=1):
-        """Grab column names line from fitting file header"""
+    def _colnames(self, filepath: str, skiprows: int = 1) -> str:
+        """Grab column names line from fitting file header.
+
+        Parameters
+        ----------
+        filepath : str
+            Filepath to the fitting file
+        skiprows : int, optional
+            Number of rows to skip before reading the column names, by default 1
+
+        Returns
+        -------
+        str
+            The column names line from the fitting file header
+
+        """
         with open(filepath) as fp:
             for i, line in enumerate(fp):
                 if i == skiprows:
                     return line
 
-    def _best(self, data, percentile=68.0, ipython=False, latex=False):
+    def best(
+        self,
+        data: pd.DataFrame,
+        percentile: float = 68.0,
+        ipython: bool = False,
+        latex: bool = False,
+    ):
         """Determine best fit parameter values given a table of mcmc parameters.
 
         Parameters
@@ -48,15 +76,15 @@ class fit:
             Percentile value for determining parameter range, by default 68.0
         ipython : bool, optional
             Set true to print fancy math when working in Jupyter Notebook, by default False
-        return_latex : bool, optional
+        latex : bool, optional
             Return a latex string of best fit parameter values and ranges, by default False
 
         Returns
         -------
-        numpy.array
-            Return array containting best fit parameter values and ranges (default behavior)
-        string
-            Return latex formated parameter strings if `return_latex` is `True`
+        numpy.array or string
+            Return array containing best fit parameter values and ranges (default behavior) or a
+            latex formatted string if `latex` is `True`
+
         """
         txt = []
         bf = []
@@ -76,18 +104,19 @@ class fit:
         else:
             return np.array(bf)
 
-    def latex_alias(self, key):
-        """Return a latex formated string for model parameters
+    def latex_alias(self, key: str) -> str:
+        """Return a latex formatted string for model parameters.
 
         Parameters
         ----------
-        key : string
+        key : str
             Shorthand model parameter name used in fitting files.
 
         Returns
         -------
-        string
+        str
             Latex string for use in displays
+
         """
         col_alias = {}
         # add other aliases.
@@ -118,7 +147,20 @@ class fit:
         else:
             return key
 
-    def free_params(self, latex=False):
+    def free_params(self, latex: bool = False) -> list[str]:
+        """Show all emerge model free parameters.
+
+        Parameters
+        ----------
+        latex : bool, optional
+            Return a latex string of best fit parameter values and ranges, by default False
+
+        Returns
+        -------
+        list[str]
+            List of model parameters
+
+        """
         fp = []
         for key in self.data.keys():
             if key not in self._reserved:
@@ -129,29 +171,97 @@ class fit:
         return fp
 
 
-class mcmc(fit):
-    def __init__(self, filepath):
+class EmergeMCMC(EmergeFitFile):
+    """A class for handling Emerge MCMC fitting files."""
+
+    def __init__(self, filepath: str):
+        """Initialize the EmergeMCMC class.
+
+        Parameters
+        ----------
+        filepath : str
+            Filepath to the emerge MCMC fitting files (plain text output)
+
+        """
         super().__init__(filepath)
 
     def best(self, **kwargs):
-        """See `_best` in parent class"""
-        return super()._best(self.data, **kwargs)
+        """Determine best fit parameter values given a table of MCMC parameters.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments to be passed to the `best` method of the parent class.
+
+        Returns
+        -------
+        numpy.array or string
+            Return array containing best fit parameter values and ranges (default behavior) or a
+            latex formatted string if `latex` is `True`.
+
+        """
+        return super().best(self.data, **kwargs)
 
 
-class hybrid(fit):
-    def __init__(self, filepath):
+class EmergeHybrid(EmergeFitFile):
+    """A class for handling Emerge Hybrid fitting files."""
+
+    def __init__(self, filepath: str):
+        """Initialize the EmergeHybrid class.
+
+        Parameters
+        ----------
+        filepath : str
+            Filepath to the emerge Hybrid fitting files (plain text output)
+
+        """
         super().__init__(filepath)
 
     def best(self, **kwargs):
-        """See `_best` in parent class"""
-        return super()._best(self.data, **kwargs)
+        """Determine best fit parameter values given a table of Hybrid parameters.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments to be passed to the `best` method of the parent class.
+
+        Returns
+        -------
+        numpy.array or string
+            Return array containing best fit parameter values and ranges (default behavior) or a
+            latex formatted string if `latex` is `True`.
+
+        """
+        return super().best(self.data, **kwargs)
 
 
-class parallel_tempering(fit):
-    def __init__(self, filepath):
+class EmergeParallelTempering(EmergeFitFile):
+    """A class for handling Emerge Parallel Tempering fitting files."""
+
+    def __init__(self, filepath: str):
+        """Initialize the EmergeParallelTempering class.
+
+        Parameters
+        ----------
+        filepath : str
+            Filepath to the emerge Parallel Tempering fitting files (plain text output)
+
+        """
         super().__init__(filepath)
 
     def best(self, **kwargs):
-        """See `_best` in parent class"""
-        # we only care about cold walkers for parameter estimation.
-        return super()._best(self.data.loc[self.data.Temp == 1], **kwargs)
+        """Determine best fit parameter values given a table of Parallel Tempering parameters.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments to be passed to the `best` method of the parent class.
+
+        Returns
+        -------
+        numpy.array or string
+            Return array containing best fit parameter values and ranges (default behavior) or a
+            latex formatted string if `latex` is `True`.
+
+        """
+        return super().best(self.data.loc[self.data.Temp == 1], **kwargs)

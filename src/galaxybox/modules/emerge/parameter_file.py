@@ -1,20 +1,21 @@
 """Classes for handling Emerge data."""
-import numpy as np
+
 import copy
+from typing import Any
+
+import numpy as np
 from astropy import cosmology as apcos
 
-__author__ = ("Joseph O'Leary",)
 
-
-class params:
+class EmergeParams:
     """Load emerege parameterfile."""
 
     def __init__(self, filepath):
         """Initialize the configuration."""
-        self.__val_indent = 29
-        self.__desc_indent = 49
+        self._val_indent = 29
+        self._desc_indent = 49
         self.load_params(filepath)
-        self.__bkp = copy.deepcopy(self.__blocks)
+        self._bkp = copy.deepcopy(self._blocks)
 
         self.cosmology = apcos.LambdaCDM(
             H0=self.get_param("HubbleParam") * 100,
@@ -27,9 +28,9 @@ class params:
         """Report current parameter file setup."""
         str = ""
         str += self.header()
-        for blk in self.__blocks:
+        for blk in self._blocks:
             str += self.blkheader(name=blk) + "\n"
-            for opt in self.__blocks[blk]:
+            for opt in self._blocks[blk]:
                 str += self.optwrite(block=blk, option=opt) + "\n"
         return str
 
@@ -42,7 +43,7 @@ class params:
             File path to `.param` file
 
         """
-        self.__blocks = {}
+        self._blocks = {}
         with open(filepath) as fp:
             for line in fp:
                 line = line.strip("\n")
@@ -50,7 +51,7 @@ class params:
                     continue
                 if line.startswith("% "):
                     blkkey = line.strip("%").strip()
-                    self.__blocks[blkkey] = {}
+                    self._blocks[blkkey] = {}
                 else:
                     if line.startswith("%"):
                         enable = False
@@ -65,7 +66,7 @@ class params:
                     line = line[0].split()
                     name = line[0]
                     value = line[1]
-                    if (value[0].isdigit()) and (name is not "ModelName"):
+                    if (value[0].isdigit()) and (name != "ModelName"):
                         # this must be numeric
                         if value.isdigit():
                             # if its a digit it must be int
@@ -75,10 +76,10 @@ class params:
                             if len(value) == 1:
                                 value = value[0]
 
-                    self.__blocks[blkkey][name] = {}
-                    self.__blocks[blkkey][name]["enable"] = enable
-                    self.__blocks[blkkey][name]["value"] = value
-                    self.__blocks[blkkey][name]["description"] = description
+                    self._blocks[blkkey][name] = {}
+                    self._blocks[blkkey][name]["enable"] = enable
+                    self._blocks[blkkey][name]["value"] = value
+                    self._blocks[blkkey][name]["description"] = description
 
     def write(self, file_path):
         """Write the current parameter configuration to a file.
@@ -91,17 +92,17 @@ class params:
         """
         fp = open(file_path, "w")
         fp.write(self.header())
-        for blk in self.__blocks:
+        for blk in self._blocks:
             fp.write("\n" + self.blkheader(name=blk))
-            for opt in self.__blocks[blk]:
+            for opt in self._blocks[blk]:
                 fp.write("\n" + self.optwrite(block=blk, option=opt))
         fp.write("\n")
         fp.close()
 
     def reset(self):
         """Reset config class to initial loaded state."""
-        del self.__blocks
-        self.__blocks = copy.deepcopy(self.__bkp)
+        del self._blocks
+        self._blocks = copy.deepcopy(self._bkp)
 
     def blank(self, length=1):
         """Create a blank space of variable lenth.
@@ -137,7 +138,7 @@ class params:
         """
         return char * length
 
-    def blkheader(self, name="", mode=None):
+    def blkheader(self, name=""):
         """Create a formated section header for a parameter file.
 
         Parameters
@@ -187,12 +188,12 @@ class params:
             A formated string for printing a parameter option to single file line
 
         """
-        if self.__blocks[block][option]["enable"]:
+        if self._blocks[block][option]["enable"]:
             enable = ""
         else:
             enable = "%"
-        value = self.__blocks[block][option]["value"]
-        if self.__blocks[block][option]["value"] is None:
+        value = self._blocks[block][option]["value"]
+        if self._blocks[block][option]["value"] is None:
             optstr = ""
         else:
             if isinstance(value, str):
@@ -226,12 +227,12 @@ class params:
                     value = np.atleast_1d(value)
                     optstr = ",".join(map(str, list(value)))
 
-        vspace = self.blank(self.__val_indent - len(enable + option))
-        b = self.__desc_indent - len(enable + option + vspace + optstr)
+        vspace = self.blank(self._val_indent - len(enable + option))
+        b = self._desc_indent - len(enable + option + vspace + optstr)
         if b <= 0:
             b = 1
         dspace = self.blank(b)
-        description = "% " + self.__blocks[block][option]["description"]
+        description = "% " + self._blocks[block][option]["description"]
 
         return enable + option + vspace + optstr + dspace + description
 
@@ -245,55 +246,66 @@ class params:
         option : type
             Configuration file option name.
         enable : string
-            Whether an option should be enabled in config file, or commented out.(the default is False).
+            Whether an option should be enabled in config file, or commented out.
+            (the default is False).
         value : int, float
             If the compile option accepts an assignable value set it (the default is None).
         description : string
             A description of the of the compile option. (the default is ' ').
 
         """
-        if block not in self.__blocks.keys():
-            self.__blocks[block] = {}
+        if block not in self._blocks.keys():
+            self._blocks[block] = {}
 
-        for k in self.__blocks:
-            if option in self.__blocks[k].keys():
-                raise KeyError(
-                    "Option " + option + " already exists. Use `.optupdate()` method."
-                )
+        for k in self._blocks:
+            if option in self._blocks[k].keys():
+                raise KeyError("Option " + option + " already exists. Use `.optupdate()` method.")
 
-        self.__blocks[block][option] = {}
-        self.__blocks[block][option]["enable"] = enable
-        self.__blocks[block][option]["value"] = value
-        self.__blocks[block][option]["description"] = description
+        self._blocks[block][option] = {}
+        self._blocks[block][option]["enable"] = enable
+        self._blocks[block][option]["value"] = value
+        self._blocks[block][option]["description"] = description
 
-    def optupdate(self, option, force=False, **kwargs):
+    def optupdate(self, option: str, force: bool = False, **kwargs):
         """Update a parameter file option.
 
         Parameters
         ----------
         option : string
             Configuration file option name
-        enable : bool, optional
-            Whether an option should be enabled in config file, or commented out.
-        value : int, float, optional
-            If the compile option accepts an assignable value set it, otherwise set to None.
-        description : string
-            A description of the of the compile option.
+        force : bool, optional
+            Whether to override restrictions when changing the model name (the default is False).
+        **kwargs : dict
+            Additional keyword arguments for updating the option.
 
         """
-        for k in self.__blocks:
-            if option in self.__blocks[k].keys():
+        for k in self._blocks:
+            if option in self._blocks[k].keys():
                 if (option == "ModelName") and (not force):
                     raise PermissionError(
-                        "Changing the model name is generally a bad idea...set `force=True` to override"
+                        "Changing the model name is generally a bad idea...set `force=True` to "
+                        "override"
                     )
                 for v in kwargs:
-                    if v in self.__blocks[k][option].keys():
-                        self.__blocks[k][option][v] = kwargs[v]
+                    if v in self._blocks[k][option].keys():
+                        self._blocks[k][option][v] = kwargs[v]
                     else:
                         raise KeyError("`{}`".format(v) + " is not a valid option key")
 
-    def get_param(self, option):
-        for b in self.__blocks:
-            if option in self.__blocks[b].keys():
-                return self.__blocks[b][option]["value"]
+    def get_param(self, option: str) -> Any:
+        """Get the value of a parameter.
+
+        Parameters
+        ----------
+        option : str
+            The name of the parameter.
+
+        Returns
+        -------
+        value : object
+            The value of the parameter.
+
+        """
+        for b in self._blocks:
+            if option in self._blocks[b].keys():
+                return self._blocks[b][option]["value"]

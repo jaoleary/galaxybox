@@ -1,26 +1,27 @@
 """Module containing functions used to read emerge input/output files."""
-import h5py
+
 import os
+import struct
+from typing import Optional, Sequence, Union
+
+import h5py
 import numpy as np
 import pandas as pd
-import struct
+
 from galaxybox.data.io import recursive_hdf5
 
-__author__ = ("Joseph O'Leary",)
 
-
-def parse_header(file_path):
-    """
-    Read the header of txt Emerge output and ruturn columns as a list of strings.
+def parse_header(file_path: str) -> list[str]:
+    """Read the header of txt Emerge output and ruturn columns as a list of strings.
 
     Parameters
     ----------
-    file_path : string
+    file_path : strg
         Path of file to be read
 
     Returns
     -------
-    col_names : list
+    col_names : list[str]
         A list containing the column names.
 
     """
@@ -38,19 +39,33 @@ def parse_header(file_path):
     return col_names
 
 
-def read_merger_list(file_path):
-    """Read an Emerge galaxy merger list."""
+def read_merger_list(file_path: str) -> pd.DataFrame:
+    """Read an Emerge galaxy merger list.
+
+    Parameters
+    ----------
+    file_path : str
+        path to an emerge formatted merger list
+
+    Returns
+    -------
+    pd.DataFrame
+        emerge formated merger list as a pandas dataframe
+
+    """
     merger_list = pd.read_hdf(file_path)
     return merger_list
 
 
-def read_tree(file_path, fields_out=None):
+def read_tree(file_path: str, fields_out: Optional[list[str]] = None) -> pd.DataFrame:
     """Read an Emerge galaxy merger tree.
 
     Parameters
     ----------
-    file_path : string
+    file_path : str
         Path of file to be read
+    fields_out : Optional[list[str]]
+        A list of column names to be used in when reading the trees
 
     Returns
     -------
@@ -164,7 +179,7 @@ def read_statistics(file_path, universe_num=0):
         for k in stat_keys:
             obs[k] = {}
             obs[k]["Data"] = {}
-            if k is "Clustering":
+            if k == "Clustering":
                 filepath = file_path + "wpobs.{:d}.out".format(universe_num)
             else:
                 filepath = file_path + k.lower() + "obs.{:d}.out".format(universe_num)
@@ -182,7 +197,7 @@ def read_statistics(file_path, universe_num=0):
                         obs[k]["Data"][key] = np.array(data, dtype=stats[k])
                     line = fp.readline()
 
-            if k is "Clustering":
+            if k == "Clustering":
                 filepath = file_path + "wpmod.{:d}.out".format(universe_num)
             else:
                 filepath = file_path + k.lower() + "mod.{:d}.out".format(universe_num)
@@ -191,25 +206,29 @@ def read_statistics(file_path, universe_num=0):
         return obs
 
 
-def read_chain(Seed, Run=0, Path="./", Mode="MCMC", sample_size=None, lnprobmin=None):
+def read_chain(
+    seed: int,
+    run: int = 0,
+    path: str = "./",
+    mode: str = "MCMC",
+    sample_size: Optional[int] = None,
+    lnprobmin: Optional[float] = None,
+) -> np.ndarray:
     """Read in an Emerge chain.txt.
 
     Parameters
     ----------
-    Seed : int
+    seed : int
         The seed value used to create the chain, defining the file name
-
-    Run : int
-        Index of the run used to define the file name (for the first run: Run==0)
-
-    Path : string
+    run : int
+        Index of the run used to define the file name (for the first run: run==0)
+    path : string
         Path to the chain file
-
-    Mode : string
+    mode : string
         Which fitting algorithm was used to create the chain. Three options:
-        1) 'MCMC' for affine invariant ensemble sampler
-        2) 'HYBRID' for the hybrid code that combines MCMC and swarm optimisation
-        3) 'PT' for parallel tempering
+        1) 'mcmc' for affine invariant ensemble sampler
+        2) 'hybrid' for the hybrid code that combines MCMC and swarm optimisation
+        3) 'pt' for parallel tempering
 
     sample_size : int
         The number of chain samples to retur. Typically on the last set of walkers are used.
@@ -220,36 +239,28 @@ def read_chain(Seed, Run=0, Path="./", Mode="MCMC", sample_size=None, lnprobmin=
 
     Returns
     -------
-    coldchain : 2-D numpy array
-        The cold chain.
+    coldchain : np.ndarray
+        2D array of the cold chain.
 
     """
-    # Set the file name
-    if Mode == "MCMC":
-        file = Path + "mcmc{}.{:03d}.out".format(Seed, Run)
-    elif Mode == "HYBRID":
-        file = Path + "hybrid{}.{:03d}.out".format(Seed, Run)
-    elif Mode == "PT":
-        file = Path + "pt{}.{:03d}.out".format(Seed, Run)
-    else:
-        return
+    mode = mode.lower()
+    file = path + f"{mode}{seed}.{run:03d}.out"
 
     # Check if file exists
     if os.path.isfile(file) is False:
-        print("File " + file + " does not exist!")
-        return
+        raise ValueError(f"File: {file} - does not exist!")
 
     # Load chain
     chain = np.loadtxt(file)
 
     # Process chain
-    if Mode == "MCMC":
+    if mode == "mcmc":
         coldchain = chain
-    if Mode == "HYBRID":
+    if mode == "hybrid":
         coldchain = chain
         # Use lnProb instead of Chi2
         coldchain[:, 0] = -coldchain[:, 0] / 2.0
-    if Mode == "PT":
+    if mode == "pt":
         # Select only cold walkers
         temp = chain[:, 12]
         coldchain = chain[temp == 1.0]
@@ -266,7 +277,7 @@ def read_chain(Seed, Run=0, Path="./", Mode="MCMC", sample_size=None, lnprobmin=
     return coldchain
 
 
-def read_parameter_file(file_path):
+def read_parameter_file(file_path: str):
     """Read in an Emerge parameter file.
 
     This function reads in and parses a standard Emerge parameter file.
@@ -301,26 +312,30 @@ def read_parameter_file(file_path):
     return params
 
 
-def read_halo_trees(file_path, file_format="EMERGE", fields_out=None):
+def read_halo_trees(
+    file_path: str, file_format: str = "emerge", fields_out: Optional[list[str]] = None
+) -> Union[tuple[np.ndarray, np.ndarray, np.ndarray, pd.DataFrame], pd.DataFrame]:
     """Read in halo merger trees.
 
     Parameters
     ----------
-    filepath : type
-        Description of parameter `filepath`.
-    file_format : type
-        Description of parameter `file_format` (the default is 'EMERGE').
+    file_path : str
+        location of the halo trees file.
+    file_format : str
+        halo tree file format (the default is 'emerge').
+    fields_out : Optional[list[str]]
+        A list of column names to be used in when reading the trees
 
     Returns
     -------
-    type
-        Description of returned object.
+    Union[tuple[np.ndarray, np.ndarray, np.ndarray, pd.DataFrame], pd.DataFrame]
+        A tuple in the case of `emerge` halo trees or a DataFrame in the case of `rockstar` trees
 
     """
     file_format = file_format.upper()
-    if file_format == "EMERGE":
+    if file_format == "emerge":
 
-        def SKIP(fname):
+        def skip(fname):
             return fname.read(4)
 
         dt = np.dtype(
@@ -345,16 +360,16 @@ def read_halo_trees(file_path, file_format="EMERGE", fields_out=None):
         )
         file = open(file_path, "rb")
 
-        SKIP(file)
-        Ntrees = struct.unpack("i", file.read(4))[0]
-        SKIP(file)
-        SKIP(file)
-        Nhalos = struct.unpack("i" * Ntrees, file.read(4 * Ntrees))
-        SKIP(file)
-        SKIP(file)
-        TreeID = struct.unpack("I" * Ntrees, file.read(4 * Ntrees))
-        SKIP(file)
-        SKIP(file)
+        skip(file)
+        ntrees = struct.unpack("i", file.read(4))[0]
+        skip(file)
+        skip(file)
+        nhalos = struct.unpack("i" * ntrees, file.read(4 * ntrees))
+        skip(file)
+        skip(file)
+        treeid = struct.unpack("I" * ntrees, file.read(4 * ntrees))
+        skip(file)
+        skip(file)
         data = np.fromfile(file, dtype=dt)
         halo_trees = pd.DataFrame(data)
         file.close()
@@ -364,8 +379,8 @@ def read_halo_trees(file_path, file_format="EMERGE", fields_out=None):
         halo_trees.loc[type_mask, "Type"] = 1
         fnum = int(file_path.split(".")[-1])
         halo_trees["FileNumber"] = fnum
-        return Ntrees, Nhalos, TreeID, halo_trees
-    elif file_format == "ROCKSTAR":
+        return ntrees, nhalos, treeid, halo_trees
+    elif file_format == "rockstar":
         col_names = parse_header(file_path)
         if fields_out is None:
             fields_out = col_names
@@ -383,54 +398,86 @@ def read_halo_trees(file_path, file_format="EMERGE", fields_out=None):
         )
 
 
-def read_halo_forests(file_path, ID_format="EMERGE"):
+def read_halo_forests(file_path: str, id_format: Optional[str] = "emerge") -> pd.DataFrame:
+    """Read in halo forests files.
+
+    Parameters
+    ----------
+    file_path : str
+        location of the halo forest file.
+    id_format : Optional[str], optional
+        set the forest file id format. rockstar uses int, emerge uses uint, by default "emerge"
+
+    Returns
+    -------
+    pd.DataFrame
+        _description_
+
+    """
+    id_format = id_format.lower()
     forests = np.loadtxt(file_path, dtype=int)
     forests = pd.DataFrame(forests, columns=["rootid", "forestid"])
 
-    if ID_format == "EMERGE":
+    if id_format == "emerge":
         forests += 1
     forests.set_index("rootid", inplace=True)
     return forests
 
 
-def write_halo_trees(file_path, tree, Ntrees, Nhalos, TreeID, file_format="EMERGE"):
-    file_format = file_format.upper()
-    if file_format == "EMERGE":
+def write_emerge_halo_trees(
+    file_path: str, tree: pd.DataFrame, ntrees: int, nhalos: Sequence[int], treeid: Sequence[int]
+) -> None:
+    """Output halo merger trees in to an emerge formatted binary.
 
-        def SKIP(fname):
-            return fname.write(struct.pack("i", 4))
+    Parameters
+    ----------
+    file_path : str
+        output filename
+    tree : pd.DataFrame
+        dataframe of the halo merger tree
+    ntrees : int
+        number of trees printed to the file
+    nhalos : Sequence[int]
+        number of halos in each tree
+    treeid : Sequence[int]
+        index value for each tree
 
-        dt = np.dtype(
-            [
-                ("haloid", np.uintc),
-                ("descid", np.uintc),
-                ("upid", np.uintc),
-                ("np", np.ushort),
-                ("mmp", np.ushort),
-                ("scale", np.single),
-                ("mvir", np.single),
-                ("rvir", np.single),
-                ("concentration", np.single),
-                ("lambda", np.single),
-                ("X_pos", np.single),
-                ("Y_pos", np.single),
-                ("Z_pos", np.single),
-                ("X_vel", np.single),
-                ("Y_vel", np.single),
-                ("Z_vel", np.single),
-            ]
-        )
-        file = open(file_path, "wb")
-        SKIP(file)
-        np.array(Ntrees, dtype=np.intc).tofile(file)
-        SKIP(file)
-        SKIP(file)
-        np.array(tuple(Nhalos), dtype=np.intc).tofile(file)
-        SKIP(file)
-        SKIP(file)
-        np.array(tuple(TreeID), dtype="I").tofile(file)
-        SKIP(file)
-        SKIP(file)
-        np.array(tree.to_records(), dtype=dt).tofile(file)
-        SKIP(file)
-        file.close()
+    """
+
+    def skip(fname):
+        return fname.write(struct.pack("i", 4))
+
+    dt = np.dtype(
+        [
+            ("haloid", np.uintc),
+            ("descid", np.uintc),
+            ("upid", np.uintc),
+            ("np", np.ushort),
+            ("mmp", np.ushort),
+            ("scale", np.single),
+            ("mvir", np.single),
+            ("rvir", np.single),
+            ("concentration", np.single),
+            ("lambda", np.single),
+            ("X_pos", np.single),
+            ("Y_pos", np.single),
+            ("Z_pos", np.single),
+            ("X_vel", np.single),
+            ("Y_vel", np.single),
+            ("Z_vel", np.single),
+        ]
+    )
+    file = open(file_path, "wb")
+    skip(file)
+    np.array(ntrees, dtype=np.intc).tofile(file)
+    skip(file)
+    skip(file)
+    np.array(tuple(nhalos), dtype=np.intc).tofile(file)
+    skip(file)
+    skip(file)
+    np.array(tuple(treeid), dtype="I").tofile(file)
+    skip(file)
+    skip(file)
+    np.array(tree.to_records(), dtype=dt).tofile(file)
+    skip(file)
+    file.close()

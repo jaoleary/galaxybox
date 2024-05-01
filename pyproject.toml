@@ -40,7 +40,7 @@ src = ['src/']
 select = ["E", "F", "I", "D", "N", "W291", "W292", "W293"]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["E402"]
+"__init__.py" = ["E402", "D104"]
 
 [tool.ruff.format]
 quote-style = "double"

@@ -29,6 +29,7 @@ tables = "^3.9.1"
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.4.2"
 commitizen = "^3.24.0"
+pre-commit = "^3.7.0"
 
 
 [tool.ruff]
@@ -56,7 +57,7 @@ version_provider = "poetry"
 version_files = ["pyproject.toml:^version"]
 update_changelog_on_bump = true
 bump_message = 'bump: $current_version \u2192 $new_version'
-bump_pattern = "^.*?(break|feat|fix|refactor|docs):?"
-bump_map = {"break"="MAJOR", "feat"="MINOR", "fix"="PATCH", "refactor"="PATCH", "docs"="PATCH"}
-commit_parser = "^.*?(?P<change_type>break|feat|fix|refactor|docs):\\s(?P<message>.*)?"
-changelog_pattern = "^(break|feat|fix|refactor|docs)?(!)?"
+bump_pattern = "^.*?(release|break|feat|fix|refactor|docs):?"
+bump_map = {"release"="MAJOR", "break"="MAJOR", "feat"="MINOR", "fix"="PATCH", "refactor"="PATCH", "docs"="PATCH"}
+commit_parser = "^.*?(?P<change_type>release|break|feat|fix|refactor|docs):\\s(?P<message>.*)?"
+changelog_pattern = "^(release|break|feat|fix|refactor|docs)?(!)?"

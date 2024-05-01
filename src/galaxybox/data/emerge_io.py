@@ -57,36 +57,38 @@ def read_merger_list(file_path: str) -> pd.DataFrame:
     return merger_list
 
 
-def read_tree(file_path: str, fields_out: Optional[list[str]] = None) -> pd.DataFrame:
-    """Read an Emerge galaxy merger tree.
+def read_outputs(file_path, fields_out=None, key=None):
+    """Read an Emerge output file.
 
     Parameters
     ----------
-    file_path : str
+    file_path : string
         Path of file to be read
-    fields_out : Optional[list[str]]
-        A list of column names to be used in when reading the trees
+    fields_out : list, optional
+        List of fields to include in the output data frame.
+    key : string, optional
+        Key to specify the dataset to read from the HDF5 file.
 
     Returns
     -------
-    galaxy_tree : pandas.DataFrame
-        A data frame containing a galaxy merger tree.
+    data : pandas.DataFrame
+        A data frame containing an emerge output data.
 
     """
     if file_path.endswith(".h5"):
-        galaxy_tree = pd.read_hdf(file_path, key="MergerTree/Galaxy")
+        data = pd.read_hdf(file_path, key=key)
         if fields_out is None:
-            return galaxy_tree
+            return data
         else:
             # This is less than ideal, should really set the data columns in read_hdf.
             # That method seems to not work with this HDF5 data layout.
-            return galaxy_tree[fields_out]
+            return data[fields_out]
     else:
         col_names = parse_header(file_path)
         if fields_out is None:
             fields_out = col_names
 
-        galaxy_tree = pd.read_csv(
+        data = pd.read_csv(
             file_path,
             names=col_names,
             usecols=fields_out,
@@ -95,7 +97,7 @@ def read_tree(file_path: str, fields_out: Optional[list[str]] = None) -> pd.Data
             skiprows=1,
             sep="\s+",
         )
-        return galaxy_tree
+        return data
 
 
 def read_statistics(file_path, universe_num=0):

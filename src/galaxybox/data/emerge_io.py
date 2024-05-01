@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 import pandas as pd
 
-from galaxybox.data.io import recursive_hdf5
+from galaxybox.data.utils import load_hdf5_tree
 
 
 def parse_header(file_path: str) -> list[str]:
@@ -119,7 +119,7 @@ def read_statistics(file_path, universe_num=0):
         statfile = h5py.File(file_path, "r")
         statfilekeys = [key for key in statfile.keys()]
         h5f = statfile[statfilekeys[universe_num]]
-        stats = recursive_hdf5(h5f)
+        stats = load_hdf5_tree(h5f)
         statfile.close()
         return stats
     else:

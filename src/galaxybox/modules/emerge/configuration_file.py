@@ -1,11 +1,14 @@
 """Classes for handling Emerge data."""
-import numpy as np
+
 import copy
 
-__author__ = ("Joseph O'Leary",)
+import numpy as np
+
+# TODO: rewrite to avoid bare exceptions
+# TODO: change names of private vars
 
 
-class config:
+class EmergeConfig:
     """Import/store/update/write emerge configuration files."""
 
     def __init__(self, filepath):
@@ -98,7 +101,7 @@ class config:
         """
         return char * length
 
-    def blkheader(self, name="", mode=None):
+    def blkheader(self, name=""):
         """Create a formated section header for a configuration file.
 
         Parameters
@@ -131,13 +134,9 @@ class config:
         headerstr = self.cmtln(100)
         headerstr += "\n#!/bin/bash"
         headerstr += self.blank(12)
-        headerstr += (
-            "# this line only there to enable syntax highlighting in this file\n"
-        )
+        headerstr += "# this line only there to enable syntax highlighting in this file\n"
         headerstr += self.cmtln(100) + "\n#" + self.blank(2)
-        headerstr += (
-            "EMERGE Config file - Enable/Disable compile-time options as needed"
-        )
+        headerstr += "EMERGE Config file - Enable/Disable compile-time options as needed"
         headerstr += self.blank(30) + "#\n" + self.cmtln(100) + "\n#"
         return headerstr
 
@@ -160,13 +159,9 @@ class config:
                     blkkey = line.strip("#").strip()
                     self.__blocks[blkkey] = {}
                     line = fp.readline().strip("\n")
-                if not (
-                    line.startswith("# ")
-                    or line.startswith("#!")
-                    or len(set(line)) == 1
-                ):
+                if not (line.startswith("# ") or line.startswith("#!") or len(set(line)) == 1):
                     name = line.split("#")
-                    if name[0] is "":
+                    if name[0] == "":
                         name = name[1].strip()
                         enable = False
                     else:
@@ -184,9 +179,7 @@ class config:
 
                     self.__blocks[blkkey][name[0]]["value"] = value
                     self.__blocks[blkkey][name[0]]["enable"] = enable
-                    self.__blocks[blkkey][name[0]]["description"] = line.split("#")[
-                        -1
-                    ].strip()
+                    self.__blocks[blkkey][name[0]]["description"] = line.split("#")[-1].strip()
 
                 line = fp.readline().strip("\n")
 
@@ -199,7 +192,6 @@ class config:
             File path to `compiled_config.txt`
 
         """
-
         if hasattr(self, "_cmpl_opt"):
             del self._cmpl_opt
         self._compiled_path = filepath
@@ -208,9 +200,7 @@ class config:
         line = fp.readline().strip("\n")
         while line.startswith("#"):
             if not line.startswith("#compiled"):
-                self.build = (
-                    {}
-                )  # read in the current build info version, branch, git-hash
+                self.build = {}  # read in the current build info version, branch, git-hash
                 for b in line.strip("#").split(" - "):
                     key, value = b.split(": ")
                     self.build[key] = value
@@ -250,9 +240,7 @@ class config:
             try:
                 self.optupdate(option=opt, enable=enable, value=value)
             except:
-                self.optadd(
-                    block="OTHER OPTIONS", option=opt, enable=enable, value=value
-                )
+                self.optadd(block="OTHER OPTIONS", option=opt, enable=enable, value=value)
 
     def reset(self):
         """Reset config class to initial loaded state."""
@@ -334,9 +322,7 @@ class config:
 
         for k in self.__blocks:
             if option in self.__blocks[k].keys():
-                raise KeyError(
-                    "Option " + option + " already exists. Use `.optupdate()` method."
-                )
+                raise KeyError("Option " + option + " already exists. Use `.optupdate()` method.")
 
         self.__blocks[block][option] = {}
         self.__blocks[block][option]["enable"] = enable

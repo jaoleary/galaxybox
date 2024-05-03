@@ -1,20 +1,14 @@
 """Module containing common plotting functions for emerge data."""
 
 import os
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
+import pandas as pd
 
 from galaxybox.data.emerge_io import read_statistics
-
-__author__ = (
-    "Joseph O'Leary",
-    "Benjamin Moster",
-)
-
-
-# TODO: update docstrings.
 
 
 def plot_stats_csfrd(
@@ -27,40 +21,60 @@ def plot_stats_csfrd(
     fig_out=None,
     **kwargs,
 ):
-    """Plot the CSFRD statistics from an emerge statistics file
+    """Plot the cosmic star formation rate density (CSFRD) data.
 
     Parameters
     ----------
-    statsfile : dictionary, string
-        A dictionary with required universe statistics. Alernatively and file
-        path can be given for and
-
+    statsfile : str or h5py.Group
+        The path to the statistics file or an HDF5 group containing the CSFRD data.
+    ax : matplotlib.axes.Axes, optional
+        The axes object to plot on. If not provided, a new figure and axes will be created.
     universe_num : int, optional
-        Specifies which universe statistics will be used. Default is 0.
+        The universe number to plot. Default is 0.
+    observations : bool, optional
+        Whether to plot the observed CSFRD data. Default is True.
+    obs_alpha : float, optional
+        The transparency of the observed data markers. Default is 1.0.
+    save : bool, optional
+        Whether to save the plot as a PDF file. Default is False.
+    fig_out : str, optional
+        The output directory to save the PDF file. If not provided, the file will be saved in the
+        current directory.
+    **kwargs : dict
+        Additional keyword arguments to pass to the `ax.plot` function.
 
-    save : boolean, optional
-        If 'True' figure will be saved to current working directory as 'CSFRD.pdf'.
+    Returns
+    -------
+    matplotlib.axes.Axes
+        The axes object containing the plot.
+
+    Raises
+    ------
+    ValueError
+        If the `statsfile` is not a valid path or HDF5 group.
+
+    Notes
+    -----
+    This function plots the cosmic star formation rate density (CSFRD) data from the given
+    `statsfile`. The CSFRD data can be either observed or modeled.
+
+    If `statsfile` is a path to an HDF5 file, the CSFRD data will be read from the file.
+    The CSFRD data should be stored in the "CSFRD" group of the HDF5 file.
+
+    If `statsfile` is an HDF5 group, it is assumed to contain the CSFRD data directly.
+
+    The observed CSFRD data is plotted as error bars, where the x-axis represents the redshift and
+    the y-axis represents the logarithm of the star formation rate density.
+
+    The modeled CSFRD data is plotted as a line.
+
+    Examples
+    --------
+    >>> plot_stats_csfrd("stats.h5")
+    >>> plot_stats_csfrd("stats.h5", ax=my_axes, observations=False, save=True, fig_out="output/")
 
     """
-    mark = [
-        ".",
-        "o",
-        "v",
-        "^",
-        "<",
-        ">",
-        "s",
-        "p",
-        "P",
-        "*",
-        "h",
-        "H",
-        "+",
-        "x",
-        "X",
-        "D",
-        "d",
-    ]
+    mark = [".", "o", "v", "^", "<", ">", "s", "p", "P", "*", "h", "H", "+", "x", "X", "D", "d"]
     colors = [
         "blue",
         "green",
@@ -80,7 +94,6 @@ def plot_stats_csfrd(
         statsfile = read_statistics(statsfile, universe_num=universe_num)["CSFRD"]
 
     csfrd = statsfile
-    csfrdkeys = [key for key in csfrd.keys()]
 
     # Open plot
     if ax is None:
@@ -94,7 +107,10 @@ def plot_stats_csfrd(
         ax.set_ylim([ymin, ymax])
         ax.set_xlabel(r"$z$", size=labelsize)
         ax.set_ylabel(
-            r"$\log_{10}( {\rho}_* \, / \, \mathrm{M}_{\odot} \, \mathrm{yr}^{-1} \, \mathrm{Mpc}^{-3})$",
+            (
+                r"$\log_{10}( {\rho}_* \, / \, \mathrm{M}_{\odot}"
+                r" \, \mathrm{yr}^{-1} \, \mathrm{Mpc}^{-3})$"
+            ),
             size=labelsize,
         )
         ax.xaxis.set_major_locator(ticker.FixedLocator(np.arange(1, 14, 1)))
@@ -145,60 +161,50 @@ def plot_stats_clustering(
     fig_out=None,
     **kwargs,
 ):
-    """Plot the clustering statistics from an emerge statistics file
+    """Plot the clustering statistics from an emerge statistics file.
 
     Parameters
     ----------
     statsfile : dictionary, string
-        A dictionary with required universe statistics. Alernatively and file
-        path can be given for and
+        A dictionary with required universe statistics. Alternatively, a file
+        path can be given.
+
+    ax : matplotlib.axes.Axes, optional
+        The axes on which to plot. If not provided, a new figure and axes will be created.
+
+    annotate : bool, optional
+        If True, annotations will be added to the plot.
 
     universe_num : int, optional
         Specifies which universe statistics will be used. Default is 0.
 
-    save : boolean, optional
-        If 'True' figure will be saved to current working directory as 'clustering.pdf'.
+    observations : bool, optional
+        If True, observations will be plotted.
+
+    obs_alpha : float, optional
+        The alpha value for the observed data points.
+
+    save : bool, optional
+        If True, the figure will be saved.
+
+    fig_out : str, optional
+        The output directory for saving the figure.
+
+    **kwargs : dict, optional
+        Additional keyword arguments to be passed to the plot function.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The axes object containing the plot.
 
     """
-    mark = [
-        ".",
-        "o",
-        "v",
-        "^",
-        "<",
-        ">",
-        "s",
-        "p",
-        "P",
-        "*",
-        "h",
-        "H",
-        "+",
-        "x",
-        "X",
-        "D",
-        "d",
-    ]
-    colors = [
-        "blue",
-        "green",
-        "red",
-        "purple",
-        "olive",
-        "brown",
-        "gold",
-        "deepskyblue",
-        "lime",
-        "orange",
-        "navy",
-    ]
     labelsize = 16
     # check if the statsfile is an HDF5 group or filepath
     if isinstance(statsfile, str):
         statsfile = read_statistics(statsfile, universe_num=universe_num)["Clustering"]
 
     wp = statsfile
-    wpkeys = [key for key in wp.keys()]
 
     # Plot the WP sets
     if ax is None:
@@ -242,8 +248,6 @@ def plot_stats_clustering(
 
     # Define the number of subplots per axis
     nsets = len(wpdatakeys)
-    ny = np.int(np.floor(np.sqrt(nsets)))
-    nx = np.int(np.ceil(nsets / ny))
 
     # Go through each data set and make a subplot for each
     for i, axi in enumerate(ax.reshape(-1)):
@@ -251,7 +255,7 @@ def plot_stats_clustering(
             wpset = wpdata[wpdatakeys[i]]
             xo = wpset["Radius"]
             ym = wpset["Wp_model"]
-            sm = wpset["Sigma_model"]
+
             if observations:
                 yo = wpset["Wp_observed"]
                 so = wpset["Sigma_observed"]
@@ -286,40 +290,47 @@ def plot_stats_fq(
     fig_out=None,
     **kwargs,
 ):
-    """Plot the quenched fraction from an emerge statistics file
+    """Plot the quenched fraction from an emerge statistics file.
 
     Parameters
     ----------
     statsfile : dictionary, string
-        A dictionary with required universe statistics. Alernatively and file
-        path can be given for and
+        A dictionary with required universe statistics. Alternatively, a file
+        path can be given for the statistics file.
+
+    ax : matplotlib.axes.Axes, optional
+        The axes on which to plot the quenched fraction. If not provided, a new
+        set of axes will be created.
+
+    annotate : bool, optional
+        If True, annotate each subplot with the redshift range.
 
     universe_num : int, optional
         Specifies which universe statistics will be used. Default is 0.
 
-    save : boolean, optional
-        If 'True' figure will be saved to current working directory as 'quenched_fraction.pdf'.
+    observations : bool, optional
+        If True, plot the observed data points along with the model.
+
+    obs_alpha : float, optional
+        The transparency of the observed data points. Default is 1.0.
+
+    save : bool, optional
+        If True, save the figure as 'quenched_fraction.pdf' in the current working directory.
+
+    fig_out : str, optional
+        The directory where the figure will be saved. If provided, the figure will be saved
+        in this directory instead of the current working directory.
+
+    **kwargs : dict, optional
+        Additional keyword arguments to be passed to the `plot` function of matplotlib.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        ax object
 
     """
-    mark = [
-        ".",
-        "o",
-        "v",
-        "^",
-        "<",
-        ">",
-        "s",
-        "p",
-        "P",
-        "*",
-        "h",
-        "H",
-        "+",
-        "x",
-        "X",
-        "D",
-        "d",
-    ]
+    mark = [".", "o", "v", "^", "<", ">", "s", "p", "P", "*", "h", "H", "+", "x", "X", "D", "d"]
     colors = [
         "blue",
         "green",
@@ -339,7 +350,6 @@ def plot_stats_fq(
         statsfile = read_statistics(statsfile, universe_num=universe_num)["FQ"]
 
     fq = statsfile
-    fqkeys = [key for key in fq.keys()]
 
     # Plot the FQ sets
 
@@ -376,7 +386,6 @@ def plot_stats_fq(
     zrange = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0]
     zrange = np.array(zrange)
     zmean = 0.5 * (zrange[:-1] + zrange[1:])
-    nzbin = zmean.size
 
     # Open Data group
     fqdata = fq["Data"]
@@ -450,40 +459,47 @@ def plot_stats_smf(
     fig_out=None,
     **kwargs,
 ):
-    """Plot the stellar mass function from an emerge statistics file
+    """Plot the stellar mass function from an emerge statistics file.
 
     Parameters
     ----------
     statsfile : dictionary, string
-        A dictionary with required universe statistics. Alernatively and file
-        path can be given for and
+        A dictionary with required universe statistics. Alternatively, a file
+        path can be given.
+
+    ax : matplotlib.axes.Axes, optional
+        The axes on which to plot the stellar mass function. If not provided,
+        a new set of axes will be created.
+
+    annotate : bool, optional
+        If True, annotate each subplot with the redshift range.
 
     universe_num : int, optional
         Specifies which universe statistics will be used. Default is 0.
 
-    save : boolean, optional
-        If 'True' figure will be saved to current working directory as 'SMF.pdf'.
+    observations : bool, optional
+        If True, plot the observed data points along with the model.
+
+    obs_alpha : float, optional
+        The transparency of the observed data points. Default is 1.0.
+
+    save : bool, optional
+        If True, save the figure as 'SMF.pdf' in the current working directory.
+
+    fig_out : str, optional
+        The output directory to save the figure. If provided, the figure will be
+        saved as 'SMF.pdf' in the specified directory.
+
+    **kwargs : dict, optional
+        Additional keyword arguments to be passed to the `plot` function.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The axes on which the stellar mass function is plotted.
 
     """
-    mark = [
-        ".",
-        "o",
-        "v",
-        "^",
-        "<",
-        ">",
-        "s",
-        "p",
-        "P",
-        "*",
-        "h",
-        "H",
-        "+",
-        "x",
-        "X",
-        "D",
-        "d",
-    ]
+    mark = [".", "o", "v", "^", "<", ">", "s", "p", "P", "*", "h", "H", "+", "x", "X", "D", "d"]
     colors = [
         "blue",
         "green",
@@ -503,13 +519,9 @@ def plot_stats_smf(
         statsfile = read_statistics(statsfile, universe_num=universe_num)["SMF"]
 
     smf = statsfile
-    smfkeys = [key for key in smf.keys()]
 
     zrange = np.array([0.0, 0.2, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0])
     zmean = 0.5 * (zrange[:-1] + zrange[1:])
-    nzbin = zmean.size
-    ny = np.int(np.floor(np.sqrt(nzbin)))
-    nx = np.int(np.ceil(nzbin / ny))
 
     # Open Data group
     smfdata = smf["Data"]
@@ -626,40 +638,47 @@ def plot_stats_ssfr(
     fig_out=None,
     **kwargs,
 ):
-    """Plot the specific star formation rates from an emerge statistics file
+    """Plot the specific star formation rates from an emerge statistics file.
 
     Parameters
     ----------
     statsfile : dictionary, string
-        A dictionary with required universe statistics. Alernatively and file
-        path can be given for and
+        A dictionary with required universe statistics. Alternatively, a file
+        path can be given for and HDF5 group.
+
+    ax : matplotlib.axes.Axes, optional
+        The axes on which to plot the data. If not provided, a new figure and axes will be created.
+
+    annotate : bool, optional
+        If True, annotations will be added to the plot.
 
     universe_num : int, optional
         Specifies which universe statistics will be used. Default is 0.
 
-    save : boolean, optional
-        If 'True' figure will be saved to current working directory as 'SSFR.pdf'.
+    observations : bool, optional
+        If True, observed data will be plotted along with the model data.
+
+    obs_alpha : float, optional
+        The transparency of the observed data markers. Default is 1.0.
+
+    save : bool, optional
+        If True, the figure will be saved to the specified file path or the current working
+        directory as 'SSFR.pdf'.
+
+    fig_out : str, optional
+        The file path to save the figure. If not provided, the figure will be saved in the current
+        working directory.
+
+    **kwargs : dict, optional
+        Additional keyword arguments to be passed to the `plot` function.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The axes on which the data is plotted.
 
     """
-    mark = [
-        ".",
-        "o",
-        "v",
-        "^",
-        "<",
-        ">",
-        "s",
-        "p",
-        "P",
-        "*",
-        "h",
-        "H",
-        "+",
-        "x",
-        "X",
-        "D",
-        "d",
-    ]
+    mark = [".", "o", "v", "^", "<", ">", "s", "p", "P", "*", "h", "H", "+", "x", "X", "D", "d"]
     colors = [
         "blue",
         "green",
@@ -679,12 +698,10 @@ def plot_stats_ssfr(
         statsfile = read_statistics(statsfile, universe_num=universe_num)["SSFR"]
 
     ssfr = statsfile
-    ssfrkeys = [key for key in ssfr.keys()]
 
     mrange = [8.0, 9.0, 10.0, 11.0, 12.0]
     mrange = np.array(mrange)
     mmean = 0.5 * (mrange[:-1] + mrange[1:])
-    nmbin = mmean.size
 
     # Open Data group
     ssfrdata = ssfr["Data"]
@@ -778,21 +795,60 @@ def plot_stats_ssfr(
 
 
 def plot_efficiency(
-    glist,
-    redshift,
-    f_baryon,
-    ax=None,
-    frac=0.15,
-    min_mass=10.5,
-    max_mass=np.inf,
-    mass_def="Halo",
-    peak_mass=True,
-    use_obs=True,
-    vmin=None,
-    vmax=None,
-    colorbar=False,
-    labelfs=18,
-):
+    glist: pd.DataFrame,
+    redshift: float,
+    f_baryon: float,
+    ax: Optional[plt.Axes] = None,
+    frac: float = 0.15,
+    min_mass: float = 10.5,
+    max_mass: float = np.inf,
+    mass_def: str = "Halo",
+    peak_mass: bool = True,
+    use_obs: bool = True,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    colorbar: bool = False,
+    labelfs: int = 18,
+) -> plt.Axes:
+    """Plot the efficiency of star formation.
+
+    Parameters
+    ----------
+    glist : pd.DataFrame
+        DataFrame containing the galaxy properties.
+    redshift : float
+        The redshift value.
+    f_baryon : float
+        The baryon fraction.
+    ax : plt.Axes, optional
+        The axes on which to plot the data. If not provided, a new figure and axes will be created.
+    frac : float, optional
+        The fraction of galaxies to sample. Default is 0.15.
+    min_mass : float, optional
+        The minimum mass threshold. Default is 10.5.
+    max_mass : float, optional
+        The maximum mass threshold. Default is np.inf.
+    mass_def : str, optional
+        The mass definition. Default is "Halo".
+    peak_mass : bool, optional
+        Whether to use peak mass. Default is True.
+    use_obs : bool, optional
+        Whether to use observed data. Default is True.
+    vmin : float, optional
+        The minimum value for the color scale. Default is None.
+    vmax : float, optional
+        The maximum value for the color scale. Default is None.
+    colorbar : bool, optional
+        Whether to show the colorbar. Default is False.
+    labelfs : int, optional
+        The font size for labels. Default is 18.
+
+    Returns
+    -------
+    plt.Axes
+        The axes on which the data is plotted.
+
+    """
     if peak_mass & (mass_def == "Halo"):
         mt = "_peak"
     else:

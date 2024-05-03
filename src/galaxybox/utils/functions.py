@@ -1,14 +1,50 @@
 """Various useful functions."""
+
+import inspect
 import os
 import subprocess
-import numpy as np
-import inspect
-from astropy import cosmology as apcos
+
 import astropy.units as apunits
+import numpy as np
+from astropy import cosmology as apcos
 
 
 def clevels(z, level=0.68, bins=1000):
-    """confidence levels"""
+    """Calculate confidence levels for a given distribution.
+
+    Parameters
+    ----------
+    z : array_like
+        The input distribution.
+    level : float, optional
+        The confidence level to calculate, ranging from 0 to 1. Default is 0.68.
+    bins : int, optional
+        The number of bins to use for histogram calculation. Default is 1000.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the mean, lower bound, and upper bound of the confidence interval.
+
+    Raises
+    ------
+    ValueError
+        If the input distribution is empty.
+
+    Notes
+    -----
+    This function calculates the confidence levels for a given distribution by computing the
+    cumulative distribution function (CDF) and finding the values that correspond to the desired
+    confidence level. The mean, lower bound, and upper bound of the confidence
+    interval are then returned.
+
+    Examples
+    --------
+    >>> z = [1, 2, 3, 4, 5]
+    >>> clevels(z, level=0.95, bins=10)
+    (3.0, 1.5, 4.5)
+
+    """
     y, x = np.histogram(z, bins=bins)
     x = 0.5 * (x[1:] + x[:-1])
     y = np.cumsum(y / np.sum(y))
@@ -49,13 +85,12 @@ def clevels(z, level=0.68, bins=1000):
     return xmean, xlow, xhigh
 
 
-def is_sorted(L):
-    """
-    Check if an array is ascending.
+def is_sorted(x):
+    """Check if an array is ascending.
 
     Parameters
     ----------
-    L : 1-D array or sequence
+    x : 1-D array or sequence
         Input array.
 
     Returns
@@ -63,14 +98,11 @@ def is_sorted(L):
     True/False : Boolean
 
     """
-    return np.all(L[:-1] <= L[1:])
+    return np.all(x[:-1] <= x[1:])
 
 
-def make_time_bins(
-    cosmology, bins=None, centered=False, db=0.01, db_type="da", max_redshift=8
-):
-    """
-    Make histogram bins with equivalent separation for scale factor, redshift and cosmic time.
+def make_time_bins(cosmology, bins=None, centered=False, db=0.01, db_type="da", max_redshift=8):
+    """Make histogram bins with equivalent separation for scale factor, redshift and cosmic time.
 
     Parameters
     ----------
@@ -88,7 +120,8 @@ def make_time_bins(
         Bin width
 
     db_type : string
-        This specifies to which unit the bin width is applied. from there the other units will be computed
+        This specifies to which unit the bin width is applied. from there the other units will be c
+        omputed
 
     max_redshift : float
         maximum redshift for bin construction.
@@ -97,7 +130,8 @@ def make_time_bins(
     Returns
     -------
     scalefactor_bins : 1-D array
-        Bin edges in units of scale factor (a). Bins returned are always set to ascending scale factor
+        Bin edges in units of scale factor (a). Bins returned are always set to ascending scale
+        factor
 
     redshift_bins : 1-D array
         Bin edges in units of redshift (z)
@@ -129,9 +163,7 @@ def make_time_bins(
         scalefactor.sort()
         temp = (scalefactor[1:] + scalefactor[:-1]) / 2
 
-        scalefactor_bins = np.append(
-            np.insert(temp, 0, scalefactor[0]), scalefactor[-1]
-        )
+        scalefactor_bins = np.append(np.insert(temp, 0, scalefactor[0]), scalefactor[-1])
 
         redshift_bins = 1 / scalefactor_bins - 1
         time_bins = cosmology.age(redshift_bins).value
@@ -154,9 +186,7 @@ def make_time_bins(
         # make redshift bins
         redshift_bins = np.zeros(len(time_bins))
         for i, time in enumerate(time_bins[1:]):
-            redshift_bins[i + 1] = apcos.z_at_value(
-                cosmology.lookback_time, time * apunits.Gyr
-            )
+            redshift_bins[i + 1] = apcos.z_at_value(cosmology.lookback_time, time * apunits.Gyr)
         # make scale factor bins
         scalefactor_bins = cosmology.scale_factor(redshift_bins)
         return (
@@ -273,9 +303,7 @@ def target_redshift_bin(redshift, cosmology, bins=None, db=0.75, db_type="dt"):
                 if time == cosmology.age(0).value:
                     redshift_bins[i] = 0
                 else:
-                    redshift_bins[i] = apcos.z_at_value(
-                        cosmology.age, time * apunits.Gyr
-                    )
+                    redshift_bins[i] = apcos.z_at_value(cosmology.age, time * apunits.Gyr)
         # make scale factor bins
         scalefactor_bins = cosmology.scale_factor(redshift_bins)
         # return time_bins
@@ -293,7 +321,7 @@ def target_redshift_bin(redshift, cosmology, bins=None, db=0.75, db_type="dt"):
 
 
 def cmd(args, path=None, encoding="utf-8", **kwargs):
-    """Wrapper function for executing command line opertions with live output to notebook cells.
+    """Execute command line operations with live output to notebook cells.
 
     Parameters
     ----------
@@ -351,8 +379,8 @@ def arg_parser(func, drop=False, **kwargs):
     return func_kwargs, kwargs
 
 
-def shuffle_string(s):
-    """Randomly shuffle a string
+def shuffle_string(s: str) -> str:
+    """Randomly shuffle a string.
 
     Parameters
     ----------
@@ -363,13 +391,14 @@ def shuffle_string(s):
     -------
     str
         The shuffled string
+
     """
     s = list(s)
     np.random.shuffle(s)
     return "".join(s)
 
 
-def translate(pos, Lbox, dx=0, axes=0):
+def translate(pos, lbox, dx=0, axes=0):
     """Translate coordinates.
 
     Parameters
@@ -377,7 +406,7 @@ def translate(pos, Lbox, dx=0, axes=0):
     pos : 2-D array
         An array of size (N, 3) containing the 3D cartesian positions for N
         points in space.
-    Lbox : float
+    lbox : float
         Comoving cosmological box side length.
     dx : float, array_like
         The magnitude of translation along each axis
@@ -395,12 +424,12 @@ def translate(pos, Lbox, dx=0, axes=0):
     axes = np.atleast_1d(axes)
     for i, a in enumerate(axes):
         pos[:, a] += dx[i]
-        above = np.where(pos[:, a] >= Lbox)
-        pos[above, a] -= Lbox
+        above = np.where(pos[:, a] >= lbox)
+        pos[above, a] -= lbox
     return pos
 
 
-def poly_traverse(coords, CCW=True):
+def poly_traverse(coords: np.ndarray, ccw: bool = True):
     """Return a (counter) clockwise coordinate list.
 
     This function takes a list of coordinates corresponding to the 2D vertex
@@ -409,10 +438,10 @@ def poly_traverse(coords, CCW=True):
 
     Parameters
     ----------
-    coords : 2-D array
+    coords : 2-D np.ndarray
         An array of size (N, 2) where N corresponds to the number of vertices on
         a polygon.
-    CCW : boolean
+    ccw : boolean
         If true the coordinates will be returned in counter-clockwise order.
         Otherwise coordinates will be returned in clockwise order (the default is True).
 
@@ -428,20 +457,20 @@ def poly_traverse(coords, CCW=True):
     # Coordinates are then sorted in order of ascending or descending angle
     # depending on whethere clockwise or counter-clockwise orientation is desired.
     order = np.argsort(np.arctan2(coords[:, 1] - center[1], coords[:, 0] - center[0]))
-    if CCW:
+    if ccw:
         return coords[order]
     else:
         return coords[order[::-1]]
 
 
-def coordinate_plane(origin=np.array([0, 0, 0]), Lbox=1, axes=[0, 1]):
+def coordinate_plane(origin=np.array([0, 0, 0]), lbox=1, axes=[0, 1]):
     """Create a square coordinate plane along desired axes starting at some origin.
 
     Parameters
     ----------
     origin : array_like
         The desired origin for the plane in 3D space (the default is np.array([0, 0, 0])).
-    Lbox : type
+    lbox : type
         The side length of the plane (the default is 1).
     axes : array_like
         The principle axes used to create the plane (the default is [0, 1]).
@@ -464,8 +493,8 @@ def coordinate_plane(origin=np.array([0, 0, 0]), Lbox=1, axes=[0, 1]):
     for aj in range(2):
         for ai in range(2):
             points[i, [axes[0], axes[1]]] = (
-                origin[axes[0]] + ai * Lbox,
-                origin[axes[1]] + aj * Lbox,
+                origin[axes[0]] + ai * lbox,
+                origin[axes[1]] + aj * lbox,
             )
             i += 1
 
@@ -493,8 +522,8 @@ def rotate(vec, angle=0, u=[1, 0, 0]):
         The 3D cartesian coordinates of the rotated vector
 
     """
-    I = np.identity(3)
-    W = np.array([[0, -u[2], u[1]], [u[2], 0, -u[0]], [-u[1], u[0], 0]])
+    I = np.identity(3)  # noqa E741
+    W = np.array([[0, -u[2], u[1]], [u[2], 0, -u[0]], [-u[1], u[0], 0]])  # noqa E741
 
-    R = I + np.sin(angle) * W + 2 * (np.sin(angle / 2) ** 2) * np.matmul(W, W)
+    R = I + np.sin(angle) * W + 2 * (np.sin(angle / 2) ** 2) * np.matmul(W, W)  # noqa E741
     return np.matmul(vec, R)

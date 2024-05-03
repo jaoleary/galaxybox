@@ -1,15 +1,16 @@
 """Classes for handling Emerge data."""
-import numpy as np
-import os
+
 import copy
-from astropy import cosmology as apcos
-import galaxybox.modules.emerge as em
-from galaxybox.utils.functions import *
-from galaxybox.data import emerge_io as em_io
-from matplotlib.pyplot import savefig
-import warnings
 import glob
+import os
+import warnings
 from types import SimpleNamespace
+
+import numpy as np
+from matplotlib.pyplot import savefig
+
+import galaxybox.modules.emerge as em
+from galaxybox.utils.functions import cmd
 
 
 class Universe:
@@ -22,7 +23,7 @@ class Universe:
     """
 
     def __init__(self, param_path, sim_type="EMERGE", include=None):
-        """Initialize a Universe object
+        """Initialize a Universe object.
 
         Parameters
         ----------
@@ -34,70 +35,59 @@ class Universe:
             A list of data classes that should be initialized in the universe, by default None
 
         """
-
         self.param_path = os.path.abspath(param_path)
         self.sim_type = sim_type.upper()
 
-        # set the sim type io routines i really really hate how this is done
-        if self.sim_type == "EMERGE":
-            params = em_io.read_parameter_file(self.param_path)
+        self.params = em.params(self.param_path)
+        self.emerge_dir = os.path.abspath(self.param_path.split("parameterfiles")[0])
+        self.out_dir = os.path.join(self.emerge_dir, "output", self.params.get_param("ModelName"))
+        self.TreefileName = self.params.get_param("TreefileName")
+        tree_dir, _ = os.path.split(self.TreefileName)
+
+        # check if this is a directory already
+        if os.path.isdir(tree_dir):
+            pass
         else:
-            raise NotImplementedError("Currently only Emerge data is supported")
-
-        if self.sim_type == "EMERGE":
-            self.params = em.params(self.param_path)
-            self.emerge_dir = os.path.abspath(
-                self.param_path.split("parameterfiles")[0]
-            )
-            self.out_dir = os.path.join(
-                self.emerge_dir, "output", self.params.get_param("ModelName")
-            )
-            self.TreefileName = self.params.get_param("TreefileName")
-            tree_dir, tree_base = os.path.split(self.TreefileName)
-
-            # check if this is a directory already
-            if os.path.isdir(tree_dir):
-                pass
-            else:
-                cwd = os.getcwd()
-                # temprorarily set the working directory to the emerge directory
-                os.chdir(self.emerge_dir)
-                if os.path.isabs(self.TreefileName):
-                    # assume it should have been relative since it failed the `isdir` check
-                    self.TreefileName = "." + self.TreefileName
-                self.TreefileName = os.path.abspath(self.TreefileName)
-                os.chdir(cwd)
-
+            cwd = os.getcwd()
+            # temprorarily set the working directory to the emerge directory
+            os.chdir(self.emerge_dir)
+            if os.path.isabs(self.TreefileName):
+                # assume it should have been relative since it failed the `isdir` check
+                self.TreefileName = "." + self.TreefileName
             self.TreefileName = os.path.abspath(self.TreefileName)
-            self.num_procs = self.params.get_param("NumFilesInParallel")
+            os.chdir(cwd)
 
-            template_config_path = os.path.abspath(
-                self.emerge_dir + "/Template-Config.sh"
-            )
-            if os.path.isfile(template_config_path):
-                if os.path.isfile(
-                    os.path.abspath(self.out_dir + "/compile_options.txt")
-                ):
-                    self.config = em.config.from_compiled(
-                        template_config_path,
-                        os.path.abspath(self.out_dir + "/compile_options.txt"),
-                    )
-                else:
-                    self.config = em.config(template_config_path)
+        self.TreefileName = os.path.abspath(self.TreefileName)
+        self.num_procs = self.params.get_param("NumFilesInParallel")
 
-        else:
-            raise NotImplementedError("Currently only Emerge data is supported")
+        template_config_path = os.path.abspath(self.emerge_dir + "/Template-Config.sh")
+        if os.path.isfile(template_config_path):
+            if os.path.isfile(os.path.abspath(self.out_dir + "/compile_options.txt")):
+                self.config = em.config.from_compiled(
+                    template_config_path,
+                    os.path.abspath(self.out_dir + "/compile_options.txt"),
+                )
+            else:
+                self.config = em.config(template_config_path)
 
         if include is not None:
             include = list(np.atleast_1d(include))
-            self.__include = [self.alias(key) for key in include]
-            self.__add()
+            self._include = [self.alias(key) for key in include]
+            self._add()
 
         else:
             self.fig_dir = self.out_dir
 
     @property
     def cosmology(self):
+        """Get the cosmology of the universe.
+
+        Returns
+        -------
+        Cosmology
+            The cosmology object representing the universe's cosmology.
+
+        """
         return self.params.cosmology
 
     @classmethod
@@ -153,15 +143,19 @@ class Universe:
         Parameters
         ----------
         universe : string, object
-            The parameter file of the unierse to be cloned (string), or an instance of the Universe object to be cloned.
+            The parameter file of the unierse to be cloned (string), or an instance of the Universe
+            object to be cloned.
         model_name : type
             Name for the new universe.
         clone_current : boolean
-            If true the `current` state of a universe object will be used. If false the initial state of the object will be cloned (the default is False).
+            If true the `current` state of a universe object will be used. If false the initial
+            state of the object will be cloned (the default is False).
         clone_include : boolean
-            If true the initial include argument for the universe will also be cloned (the default is False).
+            If true the initial include argument for the universe will also be cloned (the default
+            is False).
         include : string, list
-            A string or list of strings specifying which data should be loaded after running the model (the default is None).
+            A string or list of strings specifying which data should be loaded after running the
+            model (the default is None).
 
         Returns
         -------
@@ -195,9 +189,7 @@ class Universe:
         params_temp.optupdate("ModelName", value=model_name, force=True)
         param_path = os.path.join(emerge_dir, "parameterfiles/" + model_name + ".param")
         params_temp.write(param_path)
-        config_path = os.path.join(
-            emerge_dir, "output/" + model_name + "/compile_options.txt"
-        )
+        config_path = os.path.join(emerge_dir, "output/" + model_name + "/compile_options.txt")
         config_temp.write_compiled(config_path)
 
         # create a universe...
@@ -209,7 +201,7 @@ class Universe:
             u.__setattr__("_Universe__include", include)
         return u
 
-    def alias(self, key):
+    def alias(self, key) -> str:
         """Return proper coloumn key for input alias key.
 
         Parameters
@@ -221,8 +213,8 @@ class Universe:
         -------
         str
             The proper column name for the input alias
-        """
 
+        """
         col_alias = {}
         # add other aliases.
         col_alias["statistics"] = ["statistics", "stats"]
@@ -248,35 +240,33 @@ class Universe:
 
     def __add(self):
         """Load data that was provide to `include`."""
-        if "fig_dir" in self.__include:
+        if "fig_dir" in self._include:
             self.add_figdir(os.path.join(self.out_dir, "figures/"))
         else:
             self.fig_dir = self.out_dir
 
-        if "statistics" in self.__include:
+        if "statistics" in self._include:
             self.add_statistics()
 
-        if "galaxy_trees" in self.__include:
+        if "galaxy_trees" in self._include:
             self.add_galaxy_trees()
 
-        if "survey" in self.__include:
+        if "survey" in self._include:
             self.add_survey()
 
-        if ("galaxy_catalog" in self.__include) and (
-            "galaxy_trees" not in self.__include
-        ):
+        if ("galaxy_catalog" in self._include) and ("galaxy_trees" not in self._include):
             self.add_galaxy_catalog()
 
-        if "halo_trees" in self.__include:
+        if "halo_trees" in self._include:
             self.add_halo_trees()
 
-        if "galaxy_mergers" in self.__include:
+        if "galaxy_mergers" in self._include:
             self.add_galaxy_mergers()
 
-        if "halo_mergers" in self.__include:
+        if "halo_mergers" in self._include:
             self.add_halo_mergers()
 
-        if "fitting_files" in self.__include:
+        if "fitting_files" in self._include:
             self.add_fits()
 
     def add_figdir(self, directory_path):
@@ -293,9 +283,7 @@ class Universe:
             self.statistics = em.statistics.from_universe(self)
         else:
             print(
-                "The statistics class is not available for simulation type "
-                + self.sim_type
-                + "."
+                "The statistics class is not available for simulation type " + self.sim_type + "."
             )
 
     def add_galaxy_trees(self):
@@ -304,9 +292,7 @@ class Universe:
             self.galaxy = em.galaxy_trees.from_universe(self)
         else:
             print(
-                "The galaxy_trees class is not available for simulation type "
-                + self.sim_type
-                + "."
+                "The galaxy_trees class is not available for simulation type " + self.sim_type + "."
             )
 
     def add_galaxy_mergers(self, source=None, save=True, **kwargs):
@@ -322,15 +308,10 @@ class Universe:
             Description of parameter `source` (the default is None).
         save : type
             Description of parameter `save` (the default is True).
-
-
-        Returns
-        -------
-        type
-            Description of returned object.
+        **kwargs : type
+            Description of additional keyword arguments.
 
         """
-
         if self.sim_type == "EMERGE":
             if source is None:
                 try:
@@ -346,15 +327,11 @@ class Universe:
                     mergers = em.galaxy_mergers.from_file(
                         os.path.join(self.out_dir, "mergers.h5"), add_attrs=add
                     )
-                except:
-                    mergers = em.galaxy_mergers.from_galaxy_trees(
-                        self.galaxy, save=save, **kwargs
-                    )
+                except:  # noqa E722
+                    mergers = em.galaxy_mergers.from_galaxy_trees(self.galaxy, save=save, **kwargs)
 
             elif source == "trees":
-                mergers = em.galaxy_mergers.from_galaxy_trees(
-                    self.galaxy, save=save, **kwargs
-                )
+                mergers = em.galaxy_mergers.from_galaxy_trees(self.galaxy, save=save, **kwargs)
             else:
                 add = {
                     "out_dir": self.out_dir,
@@ -372,11 +349,7 @@ class Universe:
             else:
                 self.galaxy_mergers = mergers
         else:
-            print(
-                "The merger class is not available for simulation type "
-                + self.sim_type
-                + "."
-            )
+            print("The merger class is not available for simulation type " + self.sim_type + ".")
 
     def add_halo_trees(self, include="halos"):
         """Add the halos class as a Universe attribute."""
@@ -384,9 +357,7 @@ class Universe:
             self.halo = em.halo_trees.from_universe(self, include=include)
         else:
             print(
-                "The halo trees class is not available for simulation type "
-                + self.sim_type
-                + "."
+                "The halo trees class is not available for simulation type " + self.sim_type + "."
             )
 
     def add_halo_mergers(self, source=None, save=True):
@@ -424,7 +395,7 @@ class Universe:
                     mergers = em.halo_mergers.from_file(
                         os.path.join(self.out_dir, "halo_mergers.h5"), add_attrs=add
                     )
-                except:
+                except:  # noqa E722
                     mergers = em.halo_mergers.from_halo_trees(self.halo, save=save)
 
             elif source == "trees":
@@ -446,9 +417,7 @@ class Universe:
                 self.halo_mergers = mergers
         else:
             print(
-                "The halo merger class is not available for simulation type "
-                + self.sim_type
-                + "."
+                "The halo merger class is not available for simulation type " + self.sim_type + "."
             )
 
     def add_survey(self):
@@ -462,18 +431,21 @@ class Universe:
             "cosmology": self.cosmology,
         }
 
-        survey = em.survey(
-            file_path=os.path.join(self.out_dir, "survey.h5"), add_attrs=add
-        )
+        survey = em.survey(file_path=os.path.join(self.out_dir, "survey.h5"), add_attrs=add)
         if hasattr(self, "galaxy"):
             self.galaxy.survey = survey
-            if "galaxy_trees" in self.__include:
+            if "galaxy_trees" in self._include:
                 # if trees are available. link them.
                 self.galaxy.survey.link_trees(self.galaxy)
         else:
             self.galaxy_survey = survey
 
     def add_fits(self):
+        """Add fits to the universe.
+
+        This method searches for files in the `out_dir` directory with names starting with 'pt' and
+        'mcmc', and creates a `fit` object with the corresponding fits.
+        """
         fit = {}
         files = []
         for name in glob.glob(self.out_dir + "/pt*"):
@@ -514,7 +486,7 @@ class Universe:
         Only data that was originally in the `include` argument are reloaded.
         """
         self.flush()
-        self.__add()
+        self._add()
 
     def make(self, clean=False, **kwargs):
         """Execute `make` command in Emerge directory.
@@ -523,6 +495,8 @@ class Universe:
         ----------
         clean : boolean, optional
             Whether to run `make` or `meak clean` (the default is False).
+        **kwargs : dict, optional
+            Additional keyword arguments to pass to the `cmd` function.
 
         """
         if self.sim_type == "EMERGE":
@@ -532,9 +506,7 @@ class Universe:
                 cmd("make", path=self.emerge_dir, **kwargs)
         else:
             raise TypeError(
-                "The `make()` method is not available for simulation type "
-                + self.sim_type
-                + "."
+                "The `make()` method is not available for simulation type " + self.sim_type + "."
             )
 
     def run(self, **kwargs):
@@ -549,13 +521,11 @@ class Universe:
                     self.param_path,
                 ],
                 path=self.emerge_dir,
-                **kwargs
+                **kwargs,
             )
         else:
             raise TypeError(
-                "The `run()` method is not available for simulation type "
-                + self.sim_type
-                + "."
+                "The `run()` method is not available for simulation type " + self.sim_type + "."
             )
 
     def update(
@@ -613,15 +583,18 @@ class Universe:
         ----------
         fname : str
             The output figure name
-        """
+        **kwargs : dict, optional
+            Additional keyword arguments to pass to `matplotlib.pyplot.savefig()`.
 
+        """
         if hasattr(self.config, "build"):
             if "metadata" in kwargs.keys():
                 kwargs["metadata"] = {**kwargs["metadata"], **self.config.build}
             else:
                 kwargs["metadata"] = self.config.build.copy()
 
-            # this will catch the user warning for `Unknown infodict keyword` so we can attach build info
+            # this will catch the user warning for `Unknown infodict keyword` so we can attach
+            # build info
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 savefig(os.path.join(self.fig_dir, fname), **kwargs)

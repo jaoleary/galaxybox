@@ -1,18 +1,15 @@
-"""
-Some general use plotting functions
-"""
+"""Some general use plotting functions."""
+
+from itertools import combinations, product
+
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
-import numpy as np
-from itertools import product, combinations
-
-__author__ = ("Joseph O'Leary",)
 
 
 def linestyle(sequence=None, dash=None, dot=None, space=None, buffer=False, offset=0):
-    """Generate more linetypes from arbitrary `-`,`.` combinations with added
-       IDL like linetype shortcuts.
+    """Generate more linetypes from `-`,`.` combinations with added IDL like linetype shortcuts.
 
     Parameters
     ----------
@@ -72,27 +69,66 @@ def ls(sequence, **kwargs):
     return linestyle(sequence, **kwargs)
 
 
-def render_cube(ax, O, L):
+def render_cube(ax, origin, length):
+    """Render a cube in a 3D plot.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        The 3D plot axes.
+    origin : array-like
+        The origin of the cube.
+    length : float
+        The length of the cube's edges.
+
+    Returns
+    -------
+    ln : matplotlib.lines.Line3D
+        The lines representing the cube.
+
+    """
     # Adapted from
     # https://stackoverflow.com/questions/11140163/plotting-a-3d-cube-a-sphere-and-a-vector-in-matplotlib
-    r = [0, L]
-    og = np.atleast_1d(O)
+    r = [0, length]
+    og = np.atleast_1d(origin)
     for s, e in combinations(np.array(list(product(r, r, r))), 2):
         if np.sum(np.abs(s - e)) == r[1] - r[0]:
-            ln = ax.plot3D(
-                *zip(og + np.array(s), og + np.array(e)), color="b", alpha=0.25
-            )
+            ln = ax.plot3D(*zip(og + np.array(s), og + np.array(e)), color="b", alpha=0.25)
     return ln
 
 
 class Arrow3D(FancyArrowPatch):
-    # Adapted from
-    # https://stackoverflow.com/questions/11140163/plotting-a-3d-cube-a-sphere-and-a-vector-in-matplotlib
-    def __init__(self, xs, ys, zs, *args, **kwargs):
+    """A 3D arrow class for matplotlib plots."""
+
+    def __init__(self, xs: float, ys: float, zs: float, *args, **kwargs):
+        """Initialize the Arrow3D object.
+
+        Parameters
+        ----------
+        xs : float
+            The x-coordinate of the arrow's start point.
+        ys : float
+            The y-coordinate of the arrow's start point.
+        zs : float
+            The z-coordinate of the arrow's start point.
+        *args : tuple
+            Additional positional arguments.
+        **kwargs : dict
+            Additional keyword arguments.
+
+        """
         FancyArrowPatch.__init__(self, (0, 0), (0, 0), *args, **kwargs)
         self._verts3d = xs, ys, zs
 
     def draw(self, renderer):
+        """Draw the Arrow3D object.
+
+        Parameters
+        ----------
+        renderer : RendererBase
+            The renderer object used for drawing.
+
+        """
         xs3d, ys3d, zs3d = self._verts3d
         xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, renderer.M)
         self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))

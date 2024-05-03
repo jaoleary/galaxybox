@@ -1,11 +1,15 @@
-from galaxybox.io.emerge_io import read_halo_trees
-import pandas as pd
-import numpy as np
-import sys
+"""Module that contains the code for processing subhalo mergers."""
+
 import glob
-from multiprocessing import Pool
-import h5py
 import os
+import sys
+from multiprocessing import Pool
+
+import h5py
+import numpy as np
+import pandas as pd
+
+from galaxybox.data.emerge_io import read_halo_trees
 
 fbase_in = sys.argv[1]  # should be absolute file path
 hubble_param = np.float(sys.argv[2])  # as an example: 0.6777
@@ -13,6 +17,19 @@ num_procs = np.int(sys.argv[3])  # number of processors
 
 
 def subhalo_mergers(fname):
+    """Process the subhalo mergers from the file specified by `fname`.
+
+    Parameters
+    ----------
+    fname : str
+        The name of the file containing subhalo merger data.
+
+    Returns
+    -------
+    DataFrame
+        A DataFrame containing the processed subhalo merger data.
+
+    """
     print(fname)
     _, _, _, trees = read_halo_trees(fname)
     trees.set_index("haloid", inplace=True)
@@ -65,15 +82,11 @@ def subhalo_mergers(fname):
     # set values for the minor halo
     mergers["Minor_mvir"] = trees.loc[prog_mask]["mvir"].values
     mergers["Minor_ID"] = trees.loc[prog_mask].index.values
-    mergers["Minor_mvir_peak"] = trees.loc[mergers["Minor_ID"].values][
-        "mvir_peak"
-    ].values
+    mergers["Minor_mvir_peak"] = trees.loc[mergers["Minor_ID"].values]["mvir_peak"].values
 
     # Find properties of descendent galaxy
     mergers["Desc_ID"] = trees.loc[prog_mask]["descid"].values
-    mergers[["Scale", "Desc_mvir"]] = trees.loc[mergers["Desc_ID"].values][
-        ["scale", "mvir"]
-    ].values
+    mergers[["Scale", "Desc_mvir"]] = trees.loc[mergers["Desc_ID"].values][["scale", "mvir"]].values
 
     # Find main progenitor properties
     main_progs = trees.loc[(trees["mmp"] == 1) & trees.descid.isin(mergers["Desc_ID"])]
@@ -86,8 +99,8 @@ def subhalo_mergers(fname):
     # compute mass ratio
     mergers["MR"] = 10 ** (mergers["Main_mvir"] - mergers["Minor_mvir_peak"])
     # enforce MR >= 1
-    invert_MR = mergers["MR"] < 1
-    mergers.loc[invert_MR, ["MR"]] = 1 / mergers.loc[invert_MR, ["MR"]]
+    invert_mr = mergers["MR"] < 1
+    mergers.loc[invert_mr, ["MR"]] = 1 / mergers.loc[invert_mr, ["MR"]]
 
     return mergers
 

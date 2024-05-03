@@ -1,11 +1,13 @@
-"""Removes the substructure for your emerge formated rockstar/constistent trees halo merger trees. Fun!"""
-import galaxybox as gb
-import pandas as pd
-import numpy as np
-import sys
-import glob
+"""Remove substructure from emerge formated rockstar/constistent trees halo merger trees."""
 
+import glob
+import sys
+
+import numpy as np
+import pandas as pd
 from tqdm.auto import tqdm
+
+import galaxybox as gb
 
 # TODO: This script needs MUCH better documentation
 
@@ -50,9 +52,7 @@ print("Setting `upid`.")
 satmask = iso_trees["upid"] > 0
 broken = iso_trees.loc[iso_trees.loc[satmask]["upid"]].Type == 1
 while broken.sum() > 0:
-    bnfidx = (
-        iso_trees.loc[satmask].loc[broken.values].index
-    )  # get index with a 'bad' upid
+    bnfidx = iso_trees.loc[satmask].loc[broken.values].index  # get index with a 'bad' upid
     iso_trees.loc[bnfidx, "upid"] = iso_trees.loc[
         iso_trees.loc[iso_trees.loc[bnfidx, "upid"].values, "upid"].values
     ].index.values  # reset halo.upid to the halo[halo.upid].upid
@@ -86,17 +86,13 @@ mergers.set_index("Minor_ID", inplace=True)
 
 print("Setting new descendants.")
 infalling = mergers.index.values
-iso_trees.loc[infalling, "descid"] = mergers[
-    "Desc_ID"
-].values  # set new desc ID in trees
+iso_trees.loc[infalling, "descid"] = mergers["Desc_ID"].values  # set new desc ID in trees
 iso_trees.loc[infalling, "mmp"] = 0  # Infalling satellites are not mmp.
 
 # kill all subhalos
 iso_trees = iso_trees.loc[iso_trees.Type == 0]
 
-num_prog = iso_trees.descid.value_counts()[
-    1:
-]  # start for idx=1 because haloid=0 is reserved
+num_prog = iso_trees.descid.value_counts()[1:]  # start for idx=1 because haloid=0 is reserved
 num_prog = num_prog[num_prog > 1]
 non_leaf = iso_trees["np"] > 0
 
@@ -114,16 +110,15 @@ iso_trees.loc[mmp_check.index.values, "mmp"] = 0
 # sort by ascending desc_ID descending virial mass
 mmp_check.sort_values(["descid", "mvir"], ascending=[True, False], inplace=True)
 # get the index of the actual mmp
-true_mmp = mmp_check.iloc[
-    mmp_check.descid.searchsorted(mmp_check.descid.unique())
-].index.values
+true_mmp = mmp_check.iloc[mmp_check.descid.searchsorted(mmp_check.descid.unique())].index.values
 # set those in the new trees as mmp=1
 iso_trees.loc[true_mmp, "mmp"] = 1
 
 print("Fixing broken leaves")
 # first find all leaves
 descid = iso_trees.loc[iso_trees.np == 0].index.values
-# find all halos that are merger onto that leaf, this is due to a merger immediately post fly through.
+# find all halos that are merger onto that leaf, this is due to a merger immediately post fly
+# through.
 progid = iso_trees.loc[iso_trees.descid.isin(descid)].index.values
 # make all of these the mmp (this does not gaurantee physically consistent halo growth...)
 iso_trees.loc[progid, "mmp"] = 1
@@ -138,9 +133,7 @@ scale_mask = iso_trees["scale"] == iso_trees["scale"].max()
 iso_trees.loc[scale_mask, "rootid"] = iso_trees.loc[scale_mask].index.values
 iso_trees.loc[scale_mask, "FileNumber"] = iso_trees.loc[scale_mask, "FileNumber"].values
 
-for i, a in enumerate(
-    tqdm(np.sort(iso_trees.scale.unique())[::-1][1:], desc="Rebuilding trees")
-):
+for i, a in enumerate(tqdm(np.sort(iso_trees.scale.unique())[::-1][1:], desc="Rebuilding trees")):
     scale_mask = iso_trees["scale"] == a
     iso_trees.loc[scale_mask, ["FileNumber", "rootid"]] = iso_trees.loc[
         iso_trees.loc[scale_mask, "descid"].values
@@ -167,11 +160,7 @@ for fn in tqdm(np.arange(len(trees_path)), desc="Writing iso trees"):
     fn_mask = iso_trees["FileNumber"] == fn
     file_path = fbase_out + ".{:d}".format(fn)
     hout = iso_trees.loc[fn_mask]
-    roots = (
-        hout["rootid"]
-        .value_counts()
-        .loc[hout.loc[hout.scale == 1]["rootid"].index.values]
-    )
+    roots = hout["rootid"].value_counts().loc[hout.loc[hout.scale == 1]["rootid"].index.values]
     # print(hout.keys())
     Ntrees = len(roots)
     Nhalos = roots.values
@@ -186,9 +175,7 @@ for fn in tqdm(np.arange(len(trees_path)), desc="Writing iso trees"):
     )
 
 print("Writing new `.forests` file.")
-iso_forest = (
-    iso_trees.loc[iso_trees.rootid.unique()][["rootid"]].reset_index().to_numpy()
-)
+iso_forest = iso_trees.loc[iso_trees.rootid.unique()][["rootid"]].reset_index().to_numpy()
 np.savetxt(
     fbase_out + ".forests",
     iso_forest,

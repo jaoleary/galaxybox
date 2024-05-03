@@ -1,17 +1,17 @@
 """Classes for handling Emerge data."""
+
 import os
+
+import h5py
 import numpy as np
 import pandas as pd
-import h5py
-
-__author__ = ("Joseph O'Leary",)
 
 
-class galaxy_mergers:
+class GalaxyMergers:
     """Merger list generated using Emerge galaxy trees."""
 
     def __init__(self, merger_list_path, add_attrs=None, save=False):
-        """Initialize a galaxy_mergers object
+        """Initializse a galaxy_mergers object.
 
         Parameters
         ----------
@@ -28,9 +28,9 @@ class galaxy_mergers:
                 setattr(self, k, add_attrs[k])
         if isinstance(merger_list_path, str):
             print("Loading merger list:\n" + merger_list_path)
-            self.__list = pd.read_hdf(merger_list_path, key="Data")
+            self._list = pd.read_hdf(merger_list_path, key="Data")
         else:
-            self.__list = merger_list_path
+            self._list = merger_list_path
 
         if save:
             self.save()
@@ -43,16 +43,20 @@ class galaxy_mergers:
 
         Parameters
         ----------
-        galaxy_mergers : `galaxybox.galaxy_mergers`
-            The galaxy mergers class
-
+        cls : class
+            The class object.
         galaxy_trees : `galaxybox.galaxy_trees`
-            The galaxy_trees class
+            The galaxy_trees class.
+        save : bool
+            Whether to save the merger list.
+        **kwargs : dict
+            Additional keyword arguments to be passed to the `find_mergers` method.
 
         Returns
         -------
         galaxybox.galaxy_mergers
             galaxy mergers set from galaxy_trees
+
         """
         add = {
             "out_dir": galaxy_trees.out_dir,
@@ -80,6 +84,7 @@ class galaxy_mergers:
         -------
         galaxy_mergers
             A galaxy mergers object
+
         """
         return cls(merger_list_path, add_attrs=add_attrs)
 
@@ -92,7 +97,7 @@ class galaxy_mergers:
             pass
 
         f = h5py.File(file_out, "w")
-        data = self.__list.to_records(index=False)
+        data = self._list.to_records(index=False)
         f.create_dataset("Data", data=data, compression="gzip", compression_opts=9)
         f.close()
 
@@ -108,9 +113,10 @@ class galaxy_mergers:
         -------
         str
             The proper column name for the input alias
+
         """
         # first lets make all columns case insensitive
-        colnames = list(self.__list.keys())
+        colnames = list(self._list.keys())
         col_alias = {}
         for k in colnames:
             col_alias[k] = [k.lower()]
@@ -200,14 +206,17 @@ class galaxy_mergers:
     def list(self, mask_only=False, **kwargs):
         """Return list of galaxy mergers with specified properties.
 
-        This function selects galay mergers based on a flexible set of arguments. Any column of the galaxy_mergers.__list attribute can
-        have a `min` are `max` added as a prefix or suffix to the column name or alias of the column name and passed as
-        and argument to this function. This can also be used to selected galaxy mergers based on derived properties such as color.
+        This function selects galay mergers based on a flexible set of arguments. Any column of the
+        galaxy_mergers.__list attribute can have a `min` are `max` added as a prefix or suffix to
+        the column name or alias of the column name and passed as and argument to this function.
+        This can also be used to selected galaxy mergers based on derived properties such as color.
 
         Parameters
         ----------
         mask_only : bool, optional
             Return the dataframe, or a mask for the dataframe, by default False
+        **kwargs : dict
+            Additional keyword arguments used to filter the galaxy mergers.
 
         Returns
         -------
@@ -230,23 +239,23 @@ class galaxy_mergers:
             kwargs[new_key] = kwargs.pop(kw)
 
         # Setup a default `True` mask
-        mask = self.__list["Scale"] > 0
+        mask = self._list["Scale"] > 0
         # Loop of each column in the tree and check if a min/max value mask should be created.
-        for i, key in enumerate(self.__list.keys()):
+        for i, key in enumerate(self._list.keys()):
             for j, kw in enumerate(kwargs.keys()):
                 if ("obs" in kw.lower()) & ("obs" not in key.lower()):
                     pass
                 elif key.lower() in kw.lower():
                     if ("min_" in kw.lower()) or ("_min" in kw.lower()):
-                        mask = mask & (self.__list[key] >= kwargs[kw])
+                        mask = mask & (self._list[key] >= kwargs[kw])
                     elif ("max_" in kw.lower()) or ("_max" in kw.lower()):
-                        mask = mask & (self.__list[key] < kwargs[kw])
+                        mask = mask & (self._list[key] < kwargs[kw])
                     else:
                         values = np.atleast_1d(kwargs[kw])
                         # Setup a default `False` mask
-                        sub_mask = self.__list["Scale"] > 1
+                        sub_mask = self._list["Scale"] > 1
                         for v in values:
-                            sub_mask = sub_mask | (self.__list[key] == v)
+                            sub_mask = sub_mask | (self._list[key] == v)
                         mask = mask & sub_mask
         # Create masks for derived quantities such as `color`.
         for i, kw in enumerate(kwargs.keys()):
@@ -260,23 +269,22 @@ class galaxy_mergers:
                 mass_key = self.alias(gal + "_mstar" + obs)
                 if kwargs[kw].lower() == "blue":
                     mask = mask & (
-                        (np.log10(self.__list[sfr_key]) - self.__list[mass_key])
-                        >= np.log10(0.3 / self.__list["tdf"] / self.UnitTime_in_yr)
+                        (np.log10(self._list[sfr_key]) - self._list[mass_key])
+                        >= np.log10(0.3 / self._list["tdf"] / self.UnitTime_in_yr)
                     )
                 elif kwargs[kw].lower() == "red":
                     mask = mask & (
-                        (np.log10(self.__list[sfr_key]) - self.__list[mass_key])
-                        < np.log10(0.3 / self.__list["tdf"] / self.UnitTime_in_yr)
+                        (np.log10(self._list[sfr_key]) - self._list[mass_key])
+                        < np.log10(0.3 / self._list["tdf"] / self.UnitTime_in_yr)
                     )
 
         if mask_only:
             return mask
         else:
-            return self.__list.loc[mask]
+            return self._list.loc[mask]
 
     def hist(self, axis, bins=None, inverse=False, log=False, **kwargs):
-        """
-        Histogram of mergers along some specified axis.
+        """Histogram of mergers along some specified axis.
 
         Parameters
         ----------
@@ -287,11 +295,22 @@ class galaxy_mergers:
         bins : int or 1-D array, optional
             An ascending array of bins to be used for the histogram
 
+        inverse : bool, optional
+            If True, compute the histogram of the inverse of the values along the specified axis.
+            Default is False.
+
+        log : bool, optional
+            If True, compute the histogram of the logarithm of the values along the specified axis.
+            Default is False.
+
+        **kwargs : dict
+            Additional keyword arguments used to filter the galaxy mergers.
 
         Returns
         -------
         N_mergers : 1-D array
-            A histogram containing the number of galaxy-galaxy mergers located in the specified cosmic time bins
+            A histogram containing the number of galaxy-galaxy mergers located in the specified
+            cosmic time bins
 
         bin_edges : array of dtype float
             Return the bin edges ``(length(hist)+1)``.
@@ -308,24 +327,22 @@ class galaxy_mergers:
 
         try:
             if inverse and log:
-                return np.histogram(
-                    np.log10(1 / self.__list.loc[mask][axis].values), bins
-                )
+                return np.histogram(np.log10(1 / self._list.loc[mask][axis].values), bins)
             elif inverse:
-                return np.histogram(1 / self.__list.loc[mask][axis].values, bins)
+                return np.histogram(1 / self._list.loc[mask][axis].values, bins)
             elif log:
-                return np.histogram(np.log10(self.__list.loc[mask][axis].values), bins)
+                return np.histogram(np.log10(self._list.loc[mask][axis].values), bins)
             else:
-                return np.histogram(self.__list.loc[mask][axis].values, bins)
-        except:
+                return np.histogram(self._list.loc[mask][axis].values, bins)
+        except:  # noqa E722
             raise Exception("Unrecognized axis type")
 
 
-class halo_mergers:
+class HaloMergers:
     """Merger list generated using Emerge halo trees."""
 
     def __init__(self, merger_list_path, add_attrs=None, save=False):
-        """Initialize a halo_mergers object
+        """Initialize a halo_mergers object.
 
         Parameters
         ----------
@@ -342,9 +359,9 @@ class halo_mergers:
                 setattr(self, k, add_attrs[k])
         if isinstance(merger_list_path, str):
             print("Loading halo merger list:\n" + merger_list_path)
-            self.__list = pd.read_hdf(merger_list_path, key="Data")
+            self._list = pd.read_hdf(merger_list_path, key="Data")
         else:
-            self.__list = merger_list_path
+            self._list = merger_list_path
 
         if save:
             self.save()
@@ -359,11 +376,14 @@ class halo_mergers:
         ----------
         halo_trees : `galaxybox.halo_trees`
             The galaxy_trees class
+        save : bool
+            Whether to save the merger class data to an hdf5 file.
 
         Returns
         -------
         galaxybox.halo_mergers
             halo mergers set from halo_trees
+
         """
         add = {
             "out_dir": halo_trees.out_dir,
@@ -391,6 +411,7 @@ class halo_mergers:
         -------
         halo_mergers
             A halo mergers object
+
         """
         return cls(merger_list_path, add_attrs=add_attrs)
 
@@ -403,7 +424,7 @@ class halo_mergers:
             pass
 
         f = h5py.File(file_out, "w")
-        data = self.__list.to_records(index=False)
+        data = self._list.to_records(index=False)
         f.create_dataset("Data", data=data, compression="gzip", compression_opts=9)
         f.close()
 
@@ -419,9 +440,10 @@ class halo_mergers:
         -------
         str
             The proper column name for the input alias
+
         """
         # first lets make all columns case insensitive
-        colnames = list(self.__list.keys())
+        colnames = list(self._list.keys())
         col_alias = {}
         for k in colnames:
             col_alias[k] = [k.lower()]
@@ -448,14 +470,17 @@ class halo_mergers:
     def list(self, mask_only=False, **kwargs):
         """Return list of halo mergers with specified properties.
 
-        This function selects halo mergers based on a flexible set of arguments. Any column of the halo_mergers.__list attribute can
-        have a `min` are `max` added as a prefix or suffix to the column name or alias of the column name and passed as
-        and argument to this function. This can also be used to selected halo mergers based on derived properties such as color.
+        This function selects halo mergers based on a flexible set of arguments. Any column of the
+        halo_mergers._list attribute can have a `min` are `max` added as a prefix or suffix to the
+        column name or alias of the column name and passed as snd argument to this function. This
+        can also be used to selected halo mergers based on derived properties such as color.
 
         Parameters
         ----------
         mask_only : bool, optional
             Return the dataframe, or a mask for the dataframe, by default False
+        **kwargs : dict
+            Additional keyword arguments to filter the halo mergers.
 
         Returns
         -------
@@ -478,31 +503,30 @@ class halo_mergers:
             kwargs[new_key] = kwargs.pop(kw)
 
         # Setup a default `True` mask
-        mask = self.__list["Scale"] > 0
+        mask = self._list["Scale"] > 0
         # Loop of each column in the tree and check if a min/max value mask should be created.
-        for i, key in enumerate(self.__list.keys()):
+        for i, key in enumerate(self._list.keys()):
             for j, kw in enumerate(kwargs.keys()):
                 if key.lower() in kw.lower():
                     if ("min_" in kw.lower()) or ("_min" in kw.lower()):
-                        mask = mask & (self.__list[key] >= kwargs[kw])
+                        mask = mask & (self._list[key] >= kwargs[kw])
                     elif ("max_" in kw.lower()) or ("_max" in kw.lower()):
-                        mask = mask & (self.__list[key] < kwargs[kw])
+                        mask = mask & (self._list[key] < kwargs[kw])
                     else:
                         values = np.atleast_1d(kwargs[kw])
                         # Setup a default `False` mask
-                        sub_mask = self.__list["Scale"] > 1
+                        sub_mask = self._list["Scale"] > 1
                         for v in values:
-                            sub_mask = sub_mask | (self.__list[key] == v)
+                            sub_mask = sub_mask | (self._list[key] == v)
                         mask = mask & sub_mask
 
         if mask_only:
             return mask
         else:
-            return self.__list.loc[mask]
+            return self._list.loc[mask]
 
     def hist(self, axis, bins=10, inverse=False, log=False, **kwargs):
-        """
-        Histogram of mergers along some specified axis.
+        """Histogram of mergers along some specified axis.
 
         Parameters
         ----------
@@ -513,11 +537,22 @@ class halo_mergers:
         bins : 1-D array, optional
             An ascending array of bins to be used for the histogram
 
+        inverse : bool, optional
+            If True, compute the histogram of the inverse of the values along the specified axis.
+            Default is False.
+
+        log : bool, optional
+            If True, compute the histogram of the logarithm of the values along the specified axis.
+            Default is False.
+
+        **kwargs : dict
+            Additional keyword arguments to filter the halo mergers.
 
         Returns
         -------
         N_mergers : 1-D array
-            A histogram containing the number of galaxy-galaxy mergers located in the specified cosmic time bins
+            A histogram containing the number of galaxy-galaxy mergers located in the specified
+            cosmic time bins
 
         bin_edges : array of dtype float
             Return the bin edges ``(length(hist)+1)``.
@@ -531,14 +566,12 @@ class halo_mergers:
 
         try:
             if inverse and log:
-                return np.histogram(
-                    np.log10(1 / self.__list.loc[mask][axis].values), bins
-                )
+                return np.histogram(np.log10(1 / self._list.loc[mask][axis].values), bins)
             elif inverse:
-                return np.histogram(1 / self.__list.loc[mask][axis].values, bins)
+                return np.histogram(1 / self._list.loc[mask][axis].values, bins)
             elif log:
-                return np.histogram(np.log10(self.__list.loc[mask][axis].values), bins)
+                return np.histogram(np.log10(self._list.loc[mask][axis].values), bins)
             else:
-                return np.histogram(self.__list.loc[mask][axis].values, bins)
-        except:
-            raise Exception("Unrecognized axis type")
+                return np.histogram(self._list.loc[mask][axis].values, bins)
+        except ValueError:
+            print("Unrecognized axis type")

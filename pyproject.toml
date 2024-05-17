@@ -9,6 +9,7 @@ version = "1.0.0"
 description = ""
 authors = ["Joseph O'Leary <oleary.joseph@outlook.com>"]
 readme = "README.md"
+include = ["src/galaxybox/configs/*.yaml"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -30,6 +31,7 @@ tables = "^3.9.1"
 ruff = "^0.4.2"
 commitizen = "^3.24.0"
 pre-commit = "^3.7.0"
+jupyter = "^1.0.0"
 
 
 [tool.ruff]
@@ -38,6 +40,7 @@ src = ['src/']
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "D", "N", "W291", "W292", "W293"]
+ignore = ["D107"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "D104"]

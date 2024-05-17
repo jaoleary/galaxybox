@@ -191,17 +191,15 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
             The number of galaxies at each input scale factor
 
         """
-        counts = np.zeros(len(self.scales))
-        argsin = []
+        n_gal = (
+            self.list(columns=[self.time_column], **kwargs)
+            .value_counts()
+            .sort_index()
+            .reset_index()
+        )
 
-        n_gal = self.list(columns=[self.time_column], **kwargs).value_counts().sort_index()
-
-        for i, a in enumerate(self.scales):
-            if np.isin(a, n_gal.index):
-                argsin += [i]
-        counts[argsin] = n_gal.values
-        if target_scales is None:
-            target_scales = self.scales
         target_scales = np.atleast_1d(target_scales)
-        func = interp1d(self.scales, counts)
-        return func(target_scales).astype(dtype)
+        func = interp1d(n_gal[self.time_column], n_gal["count"], fill_value="extrapolate")
+        counts = func(target_scales).astype(dtype)
+        counts[counts < 0] = 0
+        return counts

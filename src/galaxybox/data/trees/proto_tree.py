@@ -236,4 +236,4 @@ class ProtoGalaxyTree(ProtoTree):
     @cached_property
     def scales(self):
         """Find all scalefactors in the galaxy tree."""
-        return self.query(query=None, columns=[self.time_column]).values.unique()
+        return np.unique(self.query(query=None, columns=[self.time_column]).values)

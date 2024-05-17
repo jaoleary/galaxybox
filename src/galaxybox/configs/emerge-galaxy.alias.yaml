@@ -4,8 +4,8 @@
 # This allows the code to recognize different names for the same property in different data sources.
 
 Scale:              ["a", "scale_factor"]
-Redshift:           ["redshift", "z"]
-Snapshot:           ["snapshot", "snapnum", "snap"]
+redshift:           ["redshift", "z"]
+snapshot:           ["snapshot", "snapnum", "snap"]
 color:              ["color"]
 color_obs:          ["color_obs", "col_obs", "color_observed"]
 Stellar_mass:       ["mass", "mstar"]

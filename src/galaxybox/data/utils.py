@@ -3,7 +3,7 @@
 import h5py
 
 
-def load_hdf5_tree(group: h5py.Group) -> dict:
+def hdf5_to_dict(group: h5py.Group) -> dict:
     """Recursively unpack and hdf5 file into a dict.
 
     Parameters
@@ -22,5 +22,5 @@ def load_hdf5_tree(group: h5py.Group) -> dict:
         if isinstance(group[key], h5py.Dataset):
             data[key] = group[key][()]
         else:
-            data[key] = load_hdf5_tree(group[key])
+            data[key] = hdf5_to_dict(group[key])
     return data

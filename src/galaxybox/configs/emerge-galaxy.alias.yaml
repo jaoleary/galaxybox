@@ -2,7 +2,10 @@
 # This file maps various galaxy properties to their possible aliases.
 # Each key represents a galaxy property, and the value is a list of possible aliases for that property.
 # This allows the code to recognize different names for the same property in different data sources.
+# Keys that are capitalized correspond to direct EMERGE outputs. lower case keys have been added for
+# derived values and convenience.
 
+# TODO: allow for regex matching in the future
 Scale:              ["a", "scale_factor"]
 redshift:           ["redshift", "z"]
 snapshot:           ["snapshot", "snapnum", "snap"]
@@ -23,3 +26,4 @@ Intra_cluster_mass: ["icm"]
 Stellar_mass_root:  ["mstar_root","root_mstar","rootmass","root_mass"]
 Stellar_mass_obs:   ["mstar_obs"]
 Halo_radius:        ["rvir", "virial_radius", "radius"]
+stellar_mass_ratio: ["massratio", "mass_ratio", "mu", "ratio", "mr"]

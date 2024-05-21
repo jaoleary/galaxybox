@@ -4,17 +4,22 @@ import h5py
 
 
 def hdf5_to_dict(group: h5py.Group) -> dict:
-    """Recursively unpack and hdf5 file into a dict.
+    """Recursively unpack an HDF5 file into a dictionary.
+
+    This function takes an HDF5 group object and recursively unpacks it into a dictionary.
+    It iterates over the keys in the group and checks if each key corresponds to a dataset or a
+    subgroup. If it is a dataset, the corresponding value is extracted and stored in the dictionary.
+    If it is a subgroup, the function calls itself recursively to unpack the subgroup.
 
     Parameters
     ----------
-    group : HDF5 group object
-        Description of parameter `group`.
+    group : h5py.Group
+        The HDF5 group object to be unpacked.
 
     Returns
     -------
-    data : dict
-        dict containing group data (including subgroups)
+    dict
+        A dictionary containing the data from the HDF5 group, including subgroups.
 
     """
     data = {}

@@ -35,12 +35,14 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         *args,
         tree_format: str = "parquet",
         pre_load: bool = False,
+        output_mstar_threshold=7.0,
         **kwargs,
     ):
         self.time_column = "Scale"
         super().__init__(*args, alias_path=ALIAS_PATH, **kwargs)
         self.tree_format = tree_format
         self.filepath = np.atleast_1d(self.filepath)
+        self.output_mstar_threshold = output_mstar_threshold
 
         if self.tree_format not in ["parquet", "hdf5"]:
             raise ValueError(
@@ -203,3 +205,53 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         counts = func(target_scales).astype(dtype)
         counts[counts < 0] = 0
         return counts
+
+    # @cached_property
+    @property
+    def mergers_index(self):
+        """Find the progenitor indices and mass ratio of galaxies that have merged."""
+        # Since the minor component is destroyed in a merger, only these IDs will be unique
+        minor_progs = self.list(
+            flag=1,
+            min_mstar=self.output_mstar_threshold,
+            columns=["Desc_ID", "Stellar_mass", "tdf"],
+        ).reset_index()
+        minor_progs.rename(columns={"ID": "minor_ID", "Stellar_mass": "minor_mstar"}, inplace=True)
+
+        # Find the galaxy that resulted from the merger
+        desc = self.list(
+            id=minor_progs["Desc_ID"].values,
+            min_mstar=self.output_mstar_threshold,
+            columns=["ID", "MMP_ID"],
+        ).reset_index()
+
+        # create a table of mergers
+        mergers = pd.merge(
+            desc, minor_progs, left_on="ID", right_on="Desc_ID", validate="1:m"
+        ).drop(columns=["Desc_ID"])
+        mergers.rename(columns={"MMP_ID": "major_ID", "ID": "desc_ID"}, inplace=True)
+
+        # set major prog properties
+        mergers = pd.merge(
+            mergers,
+            self.list(
+                id=mergers["major_ID"],
+                min_mstar=self.output_mstar_threshold,
+                columns=["Stellar_mass"],
+            ),
+            left_on="major_ID",
+            right_index=True,
+        )
+        mergers.rename(columns={"Stellar_mass": "major_mstar"}, inplace=True)
+
+        # Find rows where minor_mstar > major_mstar
+        # Then swap major and minor properties for those mergers
+        condition = mergers["minor_mstar"] > mergers["major_mstar"]
+        mergers.loc[condition, ["major_ID", "minor_ID", "major_mstar", "minor_mstar"]] = (
+            mergers.loc[condition, ["minor_ID", "major_ID", "minor_mstar", "major_mstar"]].values
+        )
+
+        # our convention is to enforce that MR >= 1
+        mergers["stellar_mass_ratio"] = 10 ** (mergers["major_mstar"] - mergers["minor_mstar"])
+        mergers.drop(columns=["major_mstar", "minor_mstar"], inplace=True)
+        return mergers

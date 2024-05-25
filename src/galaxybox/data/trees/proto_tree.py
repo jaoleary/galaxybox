@@ -3,11 +3,12 @@
 import re
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import List, Optional
+from typing import List, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
 import yaml
+from scipy.interpolate import interp1d
 
 from galaxybox.data.utils import kwargs_to_filters
 
@@ -204,3 +205,100 @@ class ProtoGalaxyTree(ProtoTree):
     def scales(self):
         """Find all scalefactors in the galaxy tree."""
         return np.unique(self.query(query=None, columns=[self.time_column]).values)
+
+    def count(self, target_scales: Union[float, Sequence[float]] = None, dtype=int, **kwargs):
+        """Count the number of galaxies at specified scalefactor(s).
+
+        Parameters
+        ----------
+        target_scales : float, list of floats, optional
+            Scale factors at which a galaxy count should be performed, by default None
+        dtype : data type, optional
+            interpolated values will be cast into this type, by default int
+        **kwargs : dict
+            Additional keyword arguments for use in the `list` method.
+
+        Returns
+        -------
+        dtype, numpy array of dtype
+            The number of galaxies at each input scale factor
+
+        """
+        n_gal = (
+            self.list(columns=[self.time_column], **kwargs)
+            .value_counts()
+            .sort_index()
+            .reset_index()
+        )
+
+        target_scales = np.atleast_1d(target_scales)
+        func = interp1d(n_gal[self.time_column], n_gal["count"], fill_value="extrapolate")
+        counts = func(target_scales).astype(dtype)
+        counts[counts < 0] = 0
+        return counts
+
+    def hist(
+        self,
+        axis: str,
+        bins: Union[int, Sequence] = 10,
+        inverse: bool = False,
+        log: bool = False,
+        which_list: str = "list",
+        **kwargs,
+    ):
+        """Compute a histogram of values along a specified axis.
+
+        Parameters
+        ----------
+        axis : str
+            The axis along which to compute the histogram. This can be any column of the merger
+            list.
+
+        bins : Union[int, Sequence], optional
+            If an int, it defines the number of equal-width bins in the range. If a sequence, it
+            defines the bin edges, including the rightmost edge, allowing for non-uniform bin
+            widths. Default is 10.
+
+        inverse : bool, optional
+            If True, computes the histogram of the inverse of the values along the specified axis.
+            Default is False.
+
+        log : bool, optional
+            If True, computes the histogram of the logarithm of the values along the specified axis.
+            Default is False.
+
+        which_list : str, optional
+            The list method to use for getting the values. Default is "list".
+
+        **kwargs : dict, optional
+            Additional keyword arguments that are passed to the `which_list` method. These can be
+            used to filter the values that are included in the histogram.
+
+
+        Returns
+        -------
+        tuple
+            A tuple of two arrays. The first array represents the values of the histogram,
+            containing the number of galaxy-galaxy mergers located in the specified cosmic time
+            bins. The second array represents the edges of the bins.
+
+        """
+        # allow aliasing for axis argument
+        axis = self.alias(axis)
+
+        # Combine the mass and mass ratio masks
+
+        list_method = getattr(self, which_list)
+        values = list_method(**kwargs, columns=[axis])
+
+        try:
+            if inverse and log:
+                return np.histogram(np.log10(1 / values), bins)
+            elif inverse:
+                return np.histogram(1 / values, bins)
+            elif log:
+                return np.histogram(np.log10(values), bins)
+            else:
+                return np.histogram(values, bins)
+        except ValueError:
+            print("Unrecognized axis type")

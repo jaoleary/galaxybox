@@ -2,7 +2,7 @@
 
 import os
 import re
-from functools import partial
+from functools import cached_property, partial
 from typing import Sequence, Union
 
 import numpy as np
@@ -11,7 +11,7 @@ import pyarrow.parquet as pq
 from scipy.interpolate import interp1d
 
 from galaxybox.data.trees.proto_tree import ProtoGalaxyTree
-from galaxybox.data.utils import find_keys_in_string
+from galaxybox.data.utils import find_keys_in_string, kwargs_to_filters
 
 ALIAS_PATH = os.path.join(os.path.dirname(__file__), "../../configs/emerge-galaxy.alias.yaml")
 
@@ -208,8 +208,7 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         counts[counts < 0] = 0
         return counts
 
-    # @cached_property
-    @property
+    @cached_property
     def mergers_index(self):
         """Find the progenitor indices and mass ratio of galaxies that have merged."""
         # Since the minor component is destroyed in a merger, only these IDs will be unique
@@ -300,11 +299,17 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
             else:
                 raise ValueError(f"Multiple prefixes found: {prefix}")
 
+        # down select based on merger properties first (mass ratio, merger time, etc.)
+        other_kwargs = self.kwarg_swap_alias(other_kwargs)
+        filters = kwargs_to_filters(other_kwargs, mergers.columns.values)
+        query = " & ".join([" ".join(map(str, tup)) for tup in filters])
+        mergers = mergers.query(query, engine="python")  # ? unclear why engine needs to be python
+
         # secondary selection criteria
         mask = None
         for prefix in prog_kwargs.keys():
             if len(prog_kwargs[prefix]) > 0:
-                temp_idx = self.list(**prog_kwargs[prefix]).index.values
+                temp_idx = self.list(columns=["ID"], **prog_kwargs[prefix]).index.values
                 if mask is None:
                     mask = mergers[f"{prefix}_ID"].isin(temp_idx)
                 else:

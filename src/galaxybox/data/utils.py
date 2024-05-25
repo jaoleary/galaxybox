@@ -54,4 +54,4 @@ def find_keys_in_string(dictionary: dict[str, Any], string: str) -> list[str]:
         A list of keys from the dictionary that appear in the string.
 
     """
-    return [key for key in dictionary if re.search(r"\b" + re.escape(key) + r"\b", string)]
+    return [key for key in dictionary.keys() if re.search(re.escape(key), string)]

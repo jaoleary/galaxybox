@@ -1,6 +1,7 @@
 """Defines the EmergeGalaxyTrees class, a subclass of ProtoGalaxyTree."""
 
 import os
+import re
 from functools import partial
 from typing import Sequence, Union
 
@@ -10,6 +11,7 @@ import pyarrow.parquet as pq
 from scipy.interpolate import interp1d
 
 from galaxybox.data.trees.proto_tree import ProtoGalaxyTree
+from galaxybox.data.utils import find_keys_in_string
 
 ALIAS_PATH = os.path.join(os.path.dirname(__file__), "../../configs/emerge-galaxy.alias.yaml")
 
@@ -254,4 +256,61 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         # our convention is to enforce that MR >= 1
         mergers["stellar_mass_ratio"] = 10 ** (mergers["major_mstar"] - mergers["minor_mstar"])
         mergers.drop(columns=["major_mstar", "minor_mstar"], inplace=True)
+        # TODO: correct desc mass and MR for non-binary mergers
+        return mergers
+
+    def mergers_list(self, **kwargs):
+        """Return a list of mergers based on the provided keyword arguments.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Keyword arguments specifying the criteria for the mergers to be returned.
+            These can include properties of the descendant, major progenitor, minor progenitor,
+            or other properties related to the mass ratio.
+
+        Returns
+        -------
+        DataFrame
+            A pandas DataFrame containing the mergers that meet the specified criteria.
+
+        Raises
+        ------
+        ValueError
+            If multiple prefixes are found in the keyword arguments, a ValueError is raised.
+
+        """
+        mergers = self.mergers_index.copy()
+
+        # first split kwargs based on which progenior they belong to
+        prog_kwargs = {"desc": {}, "major": {}, "minor": {}}
+        other_kwargs = {}
+
+        for key in kwargs.keys():
+            prefix = find_keys_in_string(prog_kwargs, key)
+            # if a prefix is found, remove it from the key and add the key to the prog dictionary
+            if len(prefix) == 1:
+                clean_key = re.sub(prefix[0], "", key)  # remove the prefix
+                clean_key = re.sub(r"^_|_$", "", clean_key)  # remove leading/trailing underscores
+                clean_key = re.sub(r"__+", "_", clean_key)  # remove multiple underscores
+                prog_kwargs[prefix[0]][clean_key] = kwargs[key]  # add to the correct dictionary
+            # other kwargs apply to mass ration
+            elif len(prefix) == 0:
+                other_kwargs[key] = kwargs[key]
+            else:
+                raise ValueError(f"Multiple prefixes found: {prefix}")
+
+        # secondary selection criteria
+        mask = None
+        for prefix in prog_kwargs.keys():
+            if len(prog_kwargs[prefix]) > 0:
+                temp_idx = self.list(**prog_kwargs[prefix]).index.values
+                if mask is None:
+                    mask = mergers[f"{prefix}_ID"].isin(temp_idx)
+                else:
+                    mask = mask & mergers[f"{prefix}_ID"].isin(temp_idx)
+
+        if mask is not None:
+            mergers = mergers[mask]
+
         return mergers

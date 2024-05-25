@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from galaxybox.data.utils import kwargs_to_filters
+
 
 class ProtoTree(ABC):
     """Abstract base class for a tree."""
@@ -157,41 +159,6 @@ class ProtoGalaxyTree(ProtoTree):
             kwargs[new_key] = kwargs.pop(kw)
         return kwargs
 
-    def kwargs_to_filters(self, kwargs):
-        """Convert keyword arguments to a list of filters.
-
-        This method takes a dictionary of keyword arguments and converts it into a list of filters.
-        Each filter is a tuple of the form (column, operator, value), where 'column' is the name of
-        a column, 'operator' is a comparison operator (">=", "<", or "in"), and 'value' is the value
-        to compare against.
-
-        Parameters
-        ----------
-        kwargs : dict
-            A dictionary of keyword arguments, where each key is a column name with a possible 'min'
-            or 'max' prefix or suffix, and each value is the value to compare against.
-
-        Returns
-        -------
-        list
-            A list of filters, where each filter is a tuple of the form (column, operator, value).
-
-        """
-        filters = []
-        for key in self.columns:
-            for kw in kwargs.keys():
-                if ("obs" in kw.lower()) & ("obs" not in key.lower()):
-                    pass
-                elif key.lower() in kw.lower():
-                    if "min" in kw.lower():
-                        filters.append((key, ">=", kwargs[kw]))
-                    elif "max" in kw.lower():
-                        filters.append((key, "<", kwargs[kw]))
-                    else:
-                        values = np.atleast_1d(kwargs[kw]).tolist()
-                        filters.append((key, "in", values))
-        return filters
-
     def list(self, columns=None, **kwargs) -> pd.DataFrame:
         """Return list of galaxies with specified properties.
 
@@ -229,7 +196,7 @@ class ProtoGalaxyTree(ProtoTree):
         # First clean up kwargs, replace aliases
         kwargs = self.kwarg_swap_alias(kwargs)
 
-        filters = self.kwargs_to_filters(kwargs)
+        filters = kwargs_to_filters(kwargs, self.columns)
 
         return self.query(query=filters, columns=columns)
 

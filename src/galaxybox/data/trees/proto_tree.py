@@ -286,19 +286,14 @@ class ProtoGalaxyTree(ProtoTree):
         # allow aliasing for axis argument
         axis = self.alias(axis)
 
-        # Combine the mass and mass ratio masks
-
         list_method = getattr(self, which_list)
         values = list_method(**kwargs, columns=[axis])
 
-        try:
-            if inverse and log:
-                return np.histogram(np.log10(1 / values), bins)
-            elif inverse:
-                return np.histogram(1 / values, bins)
-            elif log:
-                return np.histogram(np.log10(values), bins)
-            else:
-                return np.histogram(values, bins)
-        except ValueError:
-            print("Unrecognized axis type")
+        if inverse and log:
+            return np.histogram(np.log10(1 / values), bins)
+        elif inverse:
+            return np.histogram(1 / values, bins)
+        elif log:
+            return np.histogram(np.log10(values), bins)
+        else:
+            return np.histogram(values, bins)

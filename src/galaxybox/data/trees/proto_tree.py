@@ -91,7 +91,7 @@ class ProtoGalaxyTree(ProtoTree):
         for k in self.col_alias.keys():
             if key.lower() in self.col_alias[k]:
                 return k
-        raise KeyError("`{}` has no known alias.".format(key))
+        raise KeyError(f"`{key}` has no known alias.")
 
     def _df_query(
         self, query: list[tuple[str, str, str]], columns: list[str]
@@ -155,8 +155,8 @@ class ProtoGalaxyTree(ProtoTree):
         """
         keys = list(kwargs.keys())
         for kw in keys:
-            key = re.sub(r"(^min_|^max_|_min$|_max$)", "", kw.lower())
-            new_key = kw.replace(key, self.alias(key))
+            key = re.sub(r"(^min_|^max_|_min$|_max$)", "", kw)
+            new_key = kw.replace(key, self.alias(key.lower()))
             kwargs[new_key] = kwargs.pop(kw)
         return kwargs
 

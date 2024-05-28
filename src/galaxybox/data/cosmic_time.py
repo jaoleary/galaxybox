@@ -43,6 +43,9 @@ class CosmicTimeBins(LambdaCDM):
         The output can be specified to return bins for scale factor, redshift, time, or a
         combination of these.
 
+        Note: output bins are always returned in the order they are specified and the bins values
+        are sorted to ascend in scale factor.
+
         Parameters
         ----------
         db : float, optional
@@ -71,7 +74,7 @@ class CosmicTimeBins(LambdaCDM):
 
         out = []
         for op in output:
-            out.append(locals()[op + "_bins"])
+            out.append(locals()[op + "_bins"][::-1])
 
         return out[0] if len(out) == 1 else out
 
@@ -80,6 +83,9 @@ class CosmicTimeBins(LambdaCDM):
 
         The output can be specified to return bins for scale factor, redshift, time, or a
         combination of these.
+
+        Note: output bins are always returned in the order they are specified and the bins values
+        are sorted to ascend in scale factor.
 
         Parameters
         ----------
@@ -108,10 +114,11 @@ class CosmicTimeBins(LambdaCDM):
         for i, time in enumerate(time_bins[1:]):
             redshift_bins[i + 1] = z_at_value(self.lookback_time, time * apunits.Gyr)
         scale_bins = self.scale_factor(redshift_bins)
+        time_bins = self.age(0).value - time_bins
 
         out = []
         for op in output:
-            out.append(locals()[op + "_bins"])
+            out.append(locals()[op + "_bins"][::-1])
 
         return out[0] if len(out) == 1 else out
 
@@ -120,6 +127,9 @@ class CosmicTimeBins(LambdaCDM):
 
         The output can be specified to return bins for scale factor, redshift, time, or a
         combination of these.
+
+        Note: output bins are always returned in the order they are specified and the bins values
+        are sorted to ascend in scale factor.
 
         Parameters
         ----------
@@ -148,6 +158,6 @@ class CosmicTimeBins(LambdaCDM):
 
         out = []
         for op in output:
-            out.append(locals()[op + "_bins"])
+            out.append(locals()[op + "_bins"][::-1])
 
         return out[0] if len(out) == 1 else out

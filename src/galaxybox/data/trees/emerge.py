@@ -1,19 +1,18 @@
 """Defines the EmergeGalaxyTrees class, a subclass of ProtoGalaxyTree."""
 
-import os
 import re
 from functools import cached_property, partial
-from typing import Sequence, Union
+from importlib import resources
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
-from scipy.interpolate import interp1d
 
 from galaxybox.data.trees.proto_tree import ProtoGalaxyTree
 from galaxybox.data.utils import find_keys_in_string, kwargs_to_filters
 
-ALIAS_PATH = os.path.join(os.path.dirname(__file__), "../../configs/emerge-galaxy.alias.yaml")
+ALIAS_PATH = resources.files("galaxybox.configs") / "emerge-galaxy.alias.yaml"
 
 
 class EmergeGalaxyTrees(ProtoGalaxyTree):
@@ -177,39 +176,8 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
             i += 1
         return mb[mask]
 
-    def count(self, target_scales: Union[float, Sequence[float]] = None, dtype=int, **kwargs):
-        """Count the number of galaxies at specified scalefactor(s).
-
-        Parameters
-        ----------
-        target_scales : float, list of floats, optional
-            Scale factors at which a galaxy count should be performed, by default None
-        dtype : data type, optional
-            interpolated values will be cast into this type, by default int
-        **kwargs : dict
-            Additional keyword arguments for use in the `list` method.
-
-        Returns
-        -------
-        dtype, numpy array of dtype
-            The number of galaxies at each input scale factor
-
-        """
-        n_gal = (
-            self.list(columns=[self.time_column], **kwargs)
-            .value_counts()
-            .sort_index()
-            .reset_index()
-        )
-
-        target_scales = np.atleast_1d(target_scales)
-        func = interp1d(n_gal[self.time_column], n_gal["count"], fill_value="extrapolate")
-        counts = func(target_scales).astype(dtype)
-        counts[counts < 0] = 0
-        return counts
-
     @cached_property
-    def mergers_index(self):
+    def merger_index(self):
         """Find the progenitor indices and mass ratio of galaxies that have merged."""
         # Since the minor component is destroyed in a merger, only these IDs will be unique
         minor_progs = self.list(
@@ -258,11 +226,13 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         # TODO: correct desc mass and MR for non-binary mergers
         return mergers
 
-    def mergers_list(self, **kwargs):
+    def merger_list(self, columns: Optional[list[str]] = None, **kwargs) -> pd.DataFrame:
         """Return a list of mergers based on the provided keyword arguments.
 
         Parameters
         ----------
+        columns : list, optional
+            A list of columns to return in the DataFrame. If None, all columns are returned.
         **kwargs : dict
             Keyword arguments specifying the criteria for the mergers to be returned.
             These can include properties of the descendant, major progenitor, minor progenitor,
@@ -279,7 +249,7 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
             If multiple prefixes are found in the keyword arguments, a ValueError is raised.
 
         """
-        mergers = self.mergers_index.copy()
+        mergers = self.merger_index.copy()
 
         # first split kwargs based on which progenior they belong to
         prog_kwargs = {"desc": {}, "major": {}, "minor": {}}
@@ -317,5 +287,5 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
 
         if mask is not None:
             mergers = mergers[mask]
-
-        return mergers
+        # TODO: create the option to load other properties beyond MR, tdf and ID.
+        return mergers[columns] if columns is not None else mergers

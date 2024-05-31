@@ -94,6 +94,9 @@ def kwargs_to_filters(kwargs: dict[str, Any], columns: list[str]):
                     filters.append((key, "<", kwargs[kw]))
                 else:
                     values = np.atleast_1d(kwargs[kw]).tolist()
-                    filters.append((key, "in", values))
+                    if len(values) == 1:
+                        filters.append((key, "=", values[0]))
+                    else:
+                        filters.append((key, "in", values))
     filters = None if len(filters) == 0 else filters
     return filters

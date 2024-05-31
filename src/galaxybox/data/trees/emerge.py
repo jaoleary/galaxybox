@@ -64,6 +64,12 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         self._loader_kwargs = {"key": dskey, "index_col": "ID"}
         self.columns = pd.read_hdf(self.filepath[0], dskey).columns.tolist()
         self._loader = partial(pd.read_hdf, **self._loader_kwargs)
+        self.scales = (
+            self.list(columns=[self.time_column])
+            .drop_duplicates()
+            .sort_values(self.time_column)
+            .values.squeeze()
+        )
 
     def _init_parquet(self):
         """Initialize the class for handling Parquet files."""
@@ -72,6 +78,12 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         schema = parquet_file.schema
         self.columns = schema.names
         self._loader = partial(pd.read_parquet, **self._loader_kwargs)
+        self.scales = (
+            self.list(columns=[self.time_column])
+            .drop_duplicates()
+            .sort_values(self.time_column)
+            .values.squeeze()
+        )
 
     def kwarg_swap_alias(self, kwargs):
         """Extend the super function to with a redshift alias.
@@ -134,13 +146,13 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
 
         """
         if "Leaf_ID" in self.columns:
-            leaf_idx = self.list(id=index)["Leaf_ID"].squeeze() + 1
+            leaf_idx = self.list(id=index, columns=["Leaf_ID"]).squeeze() + 1
             return self.list(min_id=index, max_id=leaf_idx)
         else:
             raise NotImplementedError("recursive loading not yet available.")
 
     def branch(self, index: int) -> pd.DataFrame:
-        """Get the branch of the galaxy tree starting from the given index.
+        """Get the main branch of the galaxy tree starting from the given index.
 
         Parameters
         ----------
@@ -153,28 +165,22 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
             The branch of the galaxy tree.
 
         """
-        # TODO: just incrememt index by one until the min scale factor is reached
-        tree = self.tree(index)
-        # Only include most massive progenitors
-        mmp_mask = (tree["MMP"] == 1) | (tree[self.time_column] == tree[self.time_column].max())
-        mb = tree.loc[mmp_mask]
-
-        # initialize a mask
-        mask = np.full(len(mb), False)
-        desc = index
-
-        # iterate over the mmp tree finding the mmp route leading to the root galaxy
-        i = 0
-        for row in mb.to_records():
-            if i == 0:
-                mask[i] = True
-            else:
-                r_id = row["Desc_ID"]
-                if r_id == desc:
-                    mask[i] = True
-                    desc = row["ID"]
-            i += 1
-        return mb[mask]
+        # the leaf_id is only available when depth first linear indexing is used so we can exploit
+        # that along with the simulation time discretness to infer the max id in the main branch
+        if "Leaf_ID" in self.columns:
+            # first get the scale at the specified index
+            scale = self.list(id=index, columns=[self.time_column]).values.squeeze()
+            # max_idx is the maximum possible id in the main branch based on the smallest simulation
+            # output time
+            max_idx = index + np.searchsorted(self.scales, scale)
+            # load all possible galaxies in the branch
+            branch = self.list(min_id=index, max_id=max_idx)
+            # the first occurance where the most massive progenitor(MMP) is 0 is the end of the
+            # main branch
+            branch_leaf_idx = np.argwhere(branch["MMP"].values == 0).min()
+            branch.iloc[:branch_leaf_idx]
+        else:
+            raise NotImplementedError("recursive loading not yet available.")
 
     @cached_property
     def merger_index(self):

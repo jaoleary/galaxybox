@@ -169,16 +169,23 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         # that along with the simulation time discretness to infer the max id in the main branch
         if "Leaf_ID" in self.columns:
             # first get the scale at the specified index
-            scale = self.list(id=index, columns=[self.time_column]).values.squeeze()
+            scale, leaf_id = self.list(
+                id=index, columns=[self.time_column, "Leaf_ID"]
+            ).values.squeeze()
             # max_idx is the maximum possible id in the main branch based on the smallest simulation
-            # output time
-            max_idx = index + np.searchsorted(self.scales, scale)
+            # output time.
+            max_idx = min(index + np.searchsorted(self.scales, scale), leaf_id + 1)
             # load all possible galaxies in the branch
             branch = self.list(min_id=index, max_id=max_idx)
+            # if all galaxies are mmp then then there are no mergers and this is the main branch
             # the first occurance where the most massive progenitor(MMP) is 0 is the end of the
             # main branch
-            branch_leaf_idx = np.argwhere(branch["MMP"].values == 0).min()
-            branch.iloc[:branch_leaf_idx]
+            mmp = branch["MMP"].values == 0
+            if sum(mmp) == 0:
+                return branch
+            else:
+                branch_leaf_idx = np.argwhere(mmp).min()
+                return branch.iloc[:branch_leaf_idx]
         else:
             raise NotImplementedError("recursive loading not yet available.")
 

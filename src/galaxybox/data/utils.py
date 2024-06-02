@@ -58,7 +58,7 @@ def find_keys_in_string(dictionary: dict[str, Any], string: str) -> list[str]:
     return [key for key in dictionary.keys() if re.search(re.escape(key), string)]
 
 
-def kwargs_to_filters(kwargs: dict[str, Any], columns: list[str]):
+def kwargs_to_filters(kwargs: dict[str, Any]):
     """Convert keyword arguments to a list of filters.
 
     This method takes a dictionary of keyword arguments and converts it into a list of filters.
@@ -83,20 +83,18 @@ def kwargs_to_filters(kwargs: dict[str, Any], columns: list[str]):
 
     """
     filters = []
-    for key in columns:
-        for kw in kwargs.keys():
-            if ("obs" in kw.lower()) & ("obs" not in key.lower()):
-                pass
-            elif key.lower() in kw.lower():
-                if "min" in kw.lower():
-                    filters.append((key, ">=", kwargs[kw]))
-                elif "max" in kw.lower():
-                    filters.append((key, "<", kwargs[kw]))
-                else:
-                    values = np.atleast_1d(kwargs[kw]).tolist()
-                    if len(values) == 1:
-                        filters.append((key, "=", values[0]))
-                    else:
-                        filters.append((key, "in", values))
+    for key, value in kwargs.items():
+        if "min" in key.lower():
+            key = re.sub(r"(^min_|^max_|_min$|_max$)", "", key)
+            filters.append((key, ">=", value))
+        elif "max" in key.lower():
+            key = re.sub(r"(^min_|^max_|_min$|_max$)", "", key)
+            filters.append((key, "<", value))
+        else:
+            values = np.atleast_1d(value).tolist()
+            if len(values) == 1:
+                filters.append((key, "=", values[0]))
+            else:
+                filters.append((key, "in", values))
     filters = None if len(filters) == 0 else filters
     return filters

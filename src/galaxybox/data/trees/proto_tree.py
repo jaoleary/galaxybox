@@ -196,8 +196,7 @@ class ProtoGalaxyTree(ProtoTree):
             columns = self.columns
         # First clean up kwargs, replace aliases
         kwargs = self.kwarg_swap_alias(kwargs)
-
-        filters = kwargs_to_filters(kwargs, self.columns)
+        filters = kwargs_to_filters(kwargs)
 
         return self.query(query=filters, columns=columns)
 

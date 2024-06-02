@@ -181,7 +181,7 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
             # the first occurance where the most massive progenitor(MMP) is 0 is the end of the
             # main branch
             mmp = branch["MMP"].values == 0
-            if sum(mmp) == 0:
+            if sum(mmp) == 0:  # if all are mmp the main `branch` has no mergers
                 return branch
             else:
                 branch_leaf_idx = np.argwhere(mmp).min()

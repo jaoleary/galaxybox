@@ -3,14 +3,16 @@
 import re
 from functools import cached_property, partial
 from importlib import resources
-from typing import Optional
+from typing import Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
+from tqdm.auto import tqdm
 
 from galaxybox.data.trees.proto_tree import ProtoGalaxyTree
 from galaxybox.data.utils import find_keys_in_string, kwargs_to_filters
+from galaxybox.utils.functions import logadd, logsum
 
 ALIAS_PATH = resources.files("galaxybox.configs") / "emerge-galaxy.alias.yaml"
 
@@ -28,6 +30,10 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         The format of the tree files, by default "parquet"
     pre_load : bool, optional
         If True, pre-loads the data, by default False
+    output_mstar_threshold : float, optional
+        The threshold for outputting star mass, by default 7.0
+    fraction_escape_icm : float, optional
+        The fraction of something that escapes to the inter-cluster medium (ICM), default 0.562183
 
     """
 
@@ -36,7 +42,8 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         *args,
         tree_format: str = "parquet",
         pre_load: bool = False,
-        output_mstar_threshold=7.0,
+        output_mstar_threshold: float = 7.0,
+        fraction_escape_icm: float = 0.562183,
         **kwargs,
     ):
         self.time_column = "Scale"
@@ -44,6 +51,7 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         self.tree_format = tree_format
         self.filepath = np.atleast_1d(self.filepath)
         self.output_mstar_threshold = output_mstar_threshold
+        self.fraction_escape_icm = fraction_escape_icm
 
         if self.tree_format not in ["parquet", "hdf5"]:
             raise ValueError(
@@ -302,3 +310,104 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
             mergers = mergers[mask]
         # TODO: create the option to load other properties beyond MR, tdf and ID.
         return mergers[columns] if columns is not None else mergers
+
+    def exsitu_mass(self, index: Union[int, Sequence[int]]) -> pd.DataFrame:
+        """Compute the ex-situ stellar mass for galaxies identified by the given index or indices.
+
+        This method calculates the total mass of stars in a galaxy that were not formed in-situ but
+        were instead accreted from other galaxies. This is done by aggregating the stellar masses
+        of all progenitor galaxies that have merged into the target galaxy up to the current time.
+
+        Parameters
+        ----------
+        index : Union[int, Sequence[int]]
+            The identifier(s) of the galaxy or galaxies for which to calculate the ex-situ stellar
+            mass. Can be a single ID as a string or a list/array of IDs.
+
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame with the index set to the galaxy IDs and a single column
+            'exsitu_Stellar_mass' containing the calculated ex-situ stellar mass for each galaxy.
+            The mass values are in log scale.
+
+        Examples
+        --------
+        >>> galaxy_ids = [123, 456, 789]
+        >>> exsitu_mass_df = simulation.exsitu_mass(galaxy_ids)
+        >>> print(exsitu_mass_df)
+                   exsitu_Stellar_mass
+        ID
+        123                    10.5
+        456                    11.0
+        789                    9.8
+
+        """
+        index = np.atleast_1d(index)
+
+        # initialize the exsitu_mass DataFrame
+        stellar_mass = self.list(id=index, columns=["Stellar_mass"])
+        exsitu_mass = pd.DataFrame(
+            index=index, columns=["exsitu_Stellar_mass", "next_mmp", "root_ID", "root_mass"]
+        )
+        exsitu_mass.index.name = "ID"
+        exsitu_mass["root_ID"] = index
+        exsitu_mass["exsitu_Stellar_mass"] = 0.0
+        exsitu_mass["root_mass"] = stellar_mass["Stellar_mass"].values
+        exsitu_mass["temp_mass"] = 0.0
+
+        # Starting at the second highest scale factor.
+        for a in (pbar := tqdm(self.scales[-2::-1])):
+            pbar.set_description(f"scale factor = {a:.3f}")
+            # exsitu_mass.index.name = "ID"
+            exsitu_mass["temp_mass"] = 0.0
+
+            progs = self.list(
+                scale=a,
+                idesc=exsitu_mass.index.values,
+                max_flag=2,
+                columns=["Desc_ID", "MMP", "Stellar_mass_root"],
+            )
+
+            # Update the index for next iteration using the ID of the most massive progenitor
+            major = progs[progs["MMP"] == 1]
+            major.reset_index(inplace=True)
+            major.set_index("Desc_ID", inplace=True)
+            exsitu_mass["next_mmp"] = exsitu_mass.index.values
+            exsitu_mass.update({"next_mmp": major["ID"]})
+
+            # Add the stellar mass of the minor progenitors to the ex-situ mass
+            minor = progs[progs["MMP"] == 0]
+            mass_frac = minor.groupby("Desc_ID")["Stellar_mass_root"].agg(logsum)
+            exsitu_mass.update({"temp_mass": mass_frac})
+            exsitu_mass.set_index("next_mmp", inplace=True)
+
+            # zero in the array is zero stellar mass, not log 0 stellar mass
+            # so we ignore those rows so that
+            non_zero_mass = (exsitu_mass["temp_mass"] > 0) & (
+                exsitu_mass["exsitu_Stellar_mass"] > 0
+            )
+            exsitu_mass.loc[non_zero_mass, "exsitu_Stellar_mass"] = logadd(
+                exsitu_mass.loc[non_zero_mass, "exsitu_Stellar_mass"],
+                exsitu_mass.loc[non_zero_mass, "temp_mass"],
+            )
+
+            # if the exsitu mass is zero but the temp mass is not, then the exsitu mass is updated
+            non_zero_temp_mass = (exsitu_mass["exsitu_Stellar_mass"] == 0) & (
+                exsitu_mass["temp_mass"] > 0
+            )
+            exsitu_mass.loc[non_zero_temp_mass, "exsitu_Stellar_mass"] = exsitu_mass.loc[
+                non_zero_temp_mass, "temp_mass"
+            ]
+
+        exsitu_mass.set_index("root_ID", inplace=True)
+        exsitu_mass.index.name = "ID"
+
+        # addjust the accreted mass by the fraction of mass that escapes the galaxy during merging
+        zero_mask = exsitu_mass["exsitu_Stellar_mass"] > 0
+        exsitu_mass.loc[zero_mask, "exsitu_Stellar_mass"] = np.log10(
+            (1 - self.fraction_escape_icm)
+            * 10 ** (exsitu_mass.loc[zero_mask, "exsitu_Stellar_mass"])
+        )
+
+        return exsitu_mass[["exsitu_Stellar_mass"]]

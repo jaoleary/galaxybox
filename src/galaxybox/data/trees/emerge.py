@@ -292,9 +292,13 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
 
         # down select based on merger properties first (mass ratio, merger time, etc.)
         other_kwargs = self.kwarg_swap_alias(other_kwargs)
-        filters = kwargs_to_filters(other_kwargs, mergers.columns.values)
-        query = " & ".join([" ".join(map(str, tup)) for tup in filters])
-        mergers = mergers.query(query, engine="python")  # ? unclear why engine needs to be python
+        filters = kwargs_to_filters(other_kwargs)
+        if filters is not None:
+            query = " & ".join([" ".join(map(str, tup)) for tup in filters])
+            mergers = mergers.query(
+                query,
+                engine="python",  # ? unclear why engine needs to be python
+            )
 
         # secondary selection criteria
         mask = None

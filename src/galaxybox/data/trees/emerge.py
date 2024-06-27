@@ -315,7 +315,7 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         # TODO: create the option to load other properties beyond MR, tdf and ID.
         return mergers[columns] if columns is not None else mergers
 
-    def exsitu_mass(self, index: Union[int, Sequence[int]]) -> pd.DataFrame:
+    def exsitu_mass(self, index: Union[int, Sequence[int]], **merger_kwargs) -> pd.DataFrame:
         """Compute the ex-situ stellar mass for galaxies identified by the given index or indices.
 
         This method calculates the total mass of stars in a galaxy that were not formed in-situ but
@@ -327,6 +327,11 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         index : Union[int, Sequence[int]]
             The identifier(s) of the galaxy or galaxies for which to calculate the ex-situ stellar
             mass. Can be a single ID as a string or a list/array of IDs.
+        **merger_kwargs : dict
+            Additional keyword arguments to configure the merger process. These can include
+            parameters such as the mass ratio threshold for considering a merger significant,
+            a time frame for considering historical mergers, and other criteria specific to the
+            merger analysis.
 
         Returns
         -------
@@ -348,6 +353,11 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
 
         """
         index = np.atleast_1d(index)
+
+        # This index list is used to validate which mergers we should consider in the exsitu calc.
+        merger_idx = self.merger_list(
+            **merger_kwargs, columns=["major_ID", "minor_ID"]
+        ).values.flatten()
 
         # initialize the exsitu_mass DataFrame
         stellar_mass = self.list(id=index, columns=["Stellar_mass"])
@@ -382,6 +392,8 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
 
             # Add the stellar mass of the minor progenitors to the ex-situ mass
             minor = progs[progs["MMP"] == 0]
+            # only include mergers selected according to merger_kwargs
+            minor = minor[minor.index.isin(merger_idx)]
             mass_frac = minor.groupby("Desc_ID")["Stellar_mass_root"].agg(logsum)
             exsitu_mass.update({"temp_mass": mass_frac})
             exsitu_mass.set_index("next_mmp", inplace=True)

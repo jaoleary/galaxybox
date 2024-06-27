@@ -8,7 +8,7 @@ import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
 
-from galaxybox.data.emerge_io import read_statistics
+from galaxybox.data.emerge import read_statistics
 
 
 def plot_stats_csfrd(

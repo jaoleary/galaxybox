@@ -12,7 +12,7 @@ from tqdm.auto import tqdm
 
 from galaxybox.data.trees.proto_tree import ProtoGalaxyTree
 from galaxybox.data.utils import find_keys_in_string, kwargs_to_filters
-from galaxybox.utils.functions import logadd, logsum
+from galaxybox.utils.logmath import logadd, logsum
 
 ALIAS_PATH = resources.files("galaxybox.configs") / "emerge-galaxy.alias.yaml"
 

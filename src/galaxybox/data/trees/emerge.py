@@ -63,6 +63,10 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         elif self.tree_format == "parquet":
             self._init_parquet()
 
+        for key in self.columns:
+            if key not in self.col_alias.keys():
+                self.col_alias[key] = [key.lower()]
+
         if pre_load:
             self._loader = [self._loader(fp) for fp in self.filepath]
 

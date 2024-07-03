@@ -98,3 +98,31 @@ def kwargs_to_filters(kwargs: dict[str, Any]):
                 filters.append((key, "in", values))
     filters = None if len(filters) == 0 else filters
     return filters
+
+
+def key_alias(key: str, alias_dict: dict[str, list[str]]) -> str:
+    """Find the primary key name for a given alias from a dictionary of aliases.
+
+    This function searches through a dictionary where each key is a primary name
+    and its value is a list of aliases. It returns the primary key name for the
+    given alias. If the alias matches directly or case-insensitively with a primary
+    key or any of its aliases, that primary key is returned. If no match is found,
+    a KeyError is raised.
+
+    Parameters
+    ----------
+    key : str
+        The alias or primary key name to search for.
+    alias_dict : dict[str, list[str]]
+        A dictionary where each key is a primary name and its value is a list of aliases.
+
+    Returns
+    -------
+    str
+        The primary key name corresponding to the given alias.
+
+    """
+    for k in alias_dict.keys():
+        if (key.lower() in alias_dict[k]) or (key.lower() == k.lower()):
+            return k
+    raise KeyError(f"`{key}` has no known alias.")

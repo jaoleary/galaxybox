@@ -10,7 +10,7 @@ import pandas as pd
 import yaml
 from scipy.interpolate import interp1d
 
-from galaxybox.data.utils import kwargs_to_filters
+from galaxybox.data.utils import key_alias, kwargs_to_filters
 
 
 class ProtoTree(ABC):
@@ -29,11 +29,6 @@ class ProtoTree(ABC):
     @abstractmethod
     def list(self, columns=None, **kwargs) -> pd.DataFrame:
         """Abstract method to list galaxies with specified properties."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def alias(self, key: str) -> str:
-        """Abstract method to return proper column key for input alias key."""
         raise NotImplementedError
 
     @abstractmethod
@@ -67,31 +62,6 @@ class ProtoGalaxyTree(ProtoTree):
         if self.alias_path is not None:
             with open(self.alias_path, "r") as f:
                 self.col_alias = yaml.safe_load(f)
-
-    def alias(self, key: str) -> str:
-        """Return proper column key for input alias key.
-
-        Parameters
-        ----------
-        key : str
-            A string alias for a galaxy tree column
-
-        Returns
-        -------
-        str
-            The proper column name for the input alias
-
-        """
-        for k in self.columns:
-            if k in self.col_alias.keys():
-                self.col_alias[k].append(k.lower())
-            else:
-                self.col_alias[k] = [k.lower()]
-
-        for k in self.col_alias.keys():
-            if key.lower() in self.col_alias[k]:
-                return k
-        raise KeyError(f"`{key}` has no known alias.")
 
     def _df_query(
         self, query: list[tuple[str, str, str]], columns: list[str]
@@ -156,7 +126,7 @@ class ProtoGalaxyTree(ProtoTree):
         keys = list(kwargs.keys())
         for kw in keys:
             key = re.sub(r"(^min_|^max_|_min$|_max$)", "", kw)
-            new_key = kw.replace(key, self.alias(key.lower()))
+            new_key = kw.replace(key, key_alias(key.lower(), self.col_alias))
             kwargs[new_key] = kwargs.pop(kw)
         return kwargs
 
@@ -283,7 +253,7 @@ class ProtoGalaxyTree(ProtoTree):
 
         """
         # allow aliasing for axis argument
-        axis = self.alias(axis)
+        axis = key_alias(axis, self.col_alias)
 
         list_method = getattr(self, which_list)
         values = list_method(**kwargs, columns=[axis])

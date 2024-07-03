@@ -126,3 +126,35 @@ def key_alias(key: str, alias_dict: dict[str, list[str]]) -> str:
         if (key.lower() in alias_dict[k]) or (key.lower() == k.lower()):
             return k
     raise KeyError(f"`{key}` has no known alias.")
+
+
+def minmax_kwarg_swap_alias(kwargs, alias_dict: dict[str, list[str]]):
+    """Alias keyword argument keys based on a provided dictionary.
+
+    This method updates the keys in the `kwargs` dictionary to their aliases as defined in
+    `alias_dict`. It handles keys with 'min' or 'max' prefixes or suffixes by preserving these
+    modifiers while replacing the base key with its alias.
+
+    Parameters
+    ----------
+    kwargs : dict
+        A dictionary of keyword arguments. Each key is a column name potentially prefixed or
+        suffixed with 'min' or 'max', indicating a range query. Each value is the corresponding
+        value for the query.
+    alias_dict : dict[str, str]
+        A dictionary mapping original column names to their aliases. Only the base column names
+        are included, without any 'min' or 'max' modifiers.
+
+    Returns
+    -------
+    dict
+        A new dictionary with the keys replaced by their aliases, preserving any 'min' or 'max'
+        modifiers.
+
+    """
+    keys = list(kwargs.keys())
+    for kw in keys:
+        key = re.sub(r"(^min_|^max_|_min$|_max$)", "", kw)
+        new_key = kw.replace(key, key_alias(key.lower(), alias_dict))
+        kwargs[new_key] = kwargs.pop(kw)
+    return kwargs

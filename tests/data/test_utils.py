@@ -7,7 +7,13 @@ import unittest
 import h5py
 import numpy as np
 
-from galaxybox.data.utils import find_keys_in_string, hdf5_to_dict, key_alias, kwargs_to_filters
+from galaxybox.data.utils import (
+    find_keys_in_string,
+    hdf5_to_dict,
+    key_alias,
+    kwargs_to_filters,
+    minmax_kwarg_swap_alias,
+)
 
 
 class TestHDF5ToDict(unittest.TestCase):
@@ -115,6 +121,42 @@ class TestKeyAlias(unittest.TestCase):
         """Test that a non-existent key raises a KeyError."""
         with self.assertRaises(KeyError):
             key_alias("C++", self.alias_dict)
+
+
+class TestMinmaxKwargSwapAlias(unittest.TestCase):
+    """Unit tests for the minmax_kwarg_swap_alias function."""
+
+    def test_alias_replacement(self):
+        """Test if the function correctly replaces keys with their aliases."""
+        kwargs = {"min_age": 18, "max_height": 200, "name": "John Doe"}
+        alias_dict = {
+            "age": ["min_age", "max_age"],
+            "height": ["min_height", "max_height"],
+            "name": ["name"],
+        }
+        expected = {"min_age": 18, "max_height": 200, "name": "John Doe"}
+        result = minmax_kwarg_swap_alias(kwargs, alias_dict)
+        self.assertEqual(result, expected)
+
+    def test_preserves_modifiers(self):
+        """Test if the function preserves 'min' and 'max' modifiers."""
+        kwargs = {"min_salary": 50000, "max_salary": 100000, "location": "New York"}
+        alias_dict = {"salary": ["min_salary", "max_salary"], "location": ["location"]}
+        expected = {"min_salary": 50000, "max_salary": 100000, "location": "New York"}
+        result = minmax_kwarg_swap_alias(kwargs, alias_dict)
+        self.assertEqual(result, expected)
+
+    def test_handles_nonexistent_aliases(self):
+        """Test how the function handles keys without aliases."""
+        kwargs = {"min_experience": 2, "max_experience": 5, "education": "Bachelor"}
+        alias_dict = {
+            "experience": ["min_experience", "max_experience"],
+            "education": ["education"],
+        }
+        # Expect the function to leave the kwargs unchanged as there's no direct alias mapping
+        expected = kwargs
+        result = minmax_kwarg_swap_alias(kwargs, alias_dict)
+        self.assertEqual(result, expected)
 
 
 if __name__ == "__main__":

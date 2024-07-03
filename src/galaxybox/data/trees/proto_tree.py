@@ -1,6 +1,5 @@
 """module contains the definition of the ProtoTree classes."""
 
-import re
 from abc import ABC, abstractmethod
 from functools import cached_property
 from typing import List, Optional, Sequence, Union
@@ -10,7 +9,7 @@ import pandas as pd
 import yaml
 from scipy.interpolate import interp1d
 
-from galaxybox.data.utils import key_alias, kwargs_to_filters
+from galaxybox.data.utils import key_alias, kwargs_to_filters, minmax_kwarg_swap_alias
 
 
 class ProtoTree(ABC):
@@ -105,30 +104,28 @@ class ProtoGalaxyTree(ProtoTree):
         return [self._loader(fp, filters=query, columns=columns) for fp in self.filepath]
 
     def kwarg_swap_alias(self, kwargs):
-        """Replace the keys in the kwargs dictionary with their aliases.
+        """Replace the keys in the `kwargs` dictionary with their aliases based on column aliases.
 
-        This method takes a dictionary of keyword arguments and replaces each key with its alias,
-        if it has one. The keys are expected to be column names with a possible 'min' or 'max'
-        prefix or suffix. The aliases are determined by the `alias` method of the class.
+        This method delegates to `minmax_kwarg_swap_alias`, passing the current instance's column
+        alias mapping (`self.col_alias`) along with the provided `kwargs`. It is designed to handle
+        keys with 'min' or 'max' prefixes or suffixes by preserving these modifiers while replacing
+        the base key with its alias from `self.col_alias`.
 
         Parameters
         ----------
         kwargs : dict
-            A dictionary of keyword arguments, where each key is a column name with a possible 'min'
-            or 'max' prefix or suffix, and each value is the value to compare against.
+            A dictionary of keyword arguments where each key is a column name that may be
+            potentially prefixed or suffixed with 'min' or 'max', indicating a range query. Each
+            value is the corresponding value for the query.
 
         Returns
         -------
         dict
-            The input dictionary with the keys replaced by their aliases.
+            A new dictionary with the keys replaced by their aliases as defined in `self.col_alias`,
+            preserving any 'min' or 'max' modifiers.
 
         """
-        keys = list(kwargs.keys())
-        for kw in keys:
-            key = re.sub(r"(^min_|^max_|_min$|_max$)", "", kw)
-            new_key = kw.replace(key, key_alias(key.lower(), self.col_alias))
-            kwargs[new_key] = kwargs.pop(kw)
-        return kwargs
+        return minmax_kwarg_swap_alias(kwargs, self.col_alias)
 
     def list(self, columns=None, **kwargs) -> pd.DataFrame:
         """Return list of galaxies with specified properties.

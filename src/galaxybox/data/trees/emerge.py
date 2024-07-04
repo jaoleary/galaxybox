@@ -97,6 +97,11 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
             .values.squeeze()
         )
 
+    @cached_property
+    def scales(self):
+        """Find all scalefactors in the galaxy tree."""
+        return np.unique(self.query(query=None, columns=[self.time_column]).values)
+
     def kwarg_swap_alias(self, kwargs):
         """Extend the super function to with a redshift alias.
 

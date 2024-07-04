@@ -1,7 +1,6 @@
 """module contains the definition of the ProtoTree classes."""
 
 from abc import ABC, abstractmethod
-from functools import cached_property
 from typing import List, Optional, Sequence, Union
 
 import numpy as np
@@ -166,11 +165,6 @@ class ProtoGalaxyTree(ProtoTree):
         filters = kwargs_to_filters(kwargs)
 
         return self.query(query=filters, columns=columns)
-
-    @cached_property
-    def scales(self):
-        """Find all scalefactors in the galaxy tree."""
-        return np.unique(self.query(query=None, columns=[self.time_column]).values)
 
     def count(self, target_scales: Union[float, Sequence[float]] = None, dtype=int, **kwargs):
         """Count the number of galaxies at specified scalefactor(s).

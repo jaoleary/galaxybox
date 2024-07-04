@@ -166,13 +166,21 @@ class ProtoGalaxyTree(ProtoTree):
 
         return self.query(query=filters, columns=columns)
 
-    def count(self, target_scales: Union[float, Sequence[float]] = None, dtype=int, **kwargs):
+    def count(
+        self,
+        time_column: str,
+        target_time: Union[float, Sequence[float]] = None,
+        dtype=int,
+        **kwargs,
+    ) -> np.ndarray:
         """Count the number of galaxies at specified scalefactor(s).
 
         Parameters
         ----------
-        target_scales : float, list of floats, optional
-            Scale factors at which a galaxy count should be performed, by default None
+        time_column : str
+            The column to use for the time values.
+        target_time : float, list of floats, optional
+            time at which a galaxy count should be performed, by default None
         dtype : data type, optional
             interpolated values will be cast into this type, by default int
         **kwargs : dict
@@ -184,16 +192,11 @@ class ProtoGalaxyTree(ProtoTree):
             The number of galaxies at each input scale factor
 
         """
-        n_gal = (
-            self.list(columns=[self.time_column], **kwargs)
-            .value_counts()
-            .sort_index()
-            .reset_index()
-        )
+        n_gal = self.list(columns=[time_column], **kwargs).value_counts().sort_index().reset_index()
 
-        target_scales = np.atleast_1d(target_scales)
-        func = interp1d(n_gal[self.time_column], n_gal["count"], fill_value="extrapolate")
-        counts = func(target_scales).astype(dtype)
+        target_time = np.atleast_1d(target_time)
+        func = interp1d(n_gal[time_column], n_gal["count"], fill_value="extrapolate")
+        counts = func(target_time).astype(dtype)
         counts[counts < 0] = 0
         return counts
 

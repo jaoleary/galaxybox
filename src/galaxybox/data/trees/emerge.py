@@ -206,6 +206,10 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         else:
             raise NotImplementedError("recursive loading not yet available.")
 
+    def count(**kwargs) -> np.ndarray:
+        """Count galaxies of some type, at some scale factor."""
+        return super().count("Scale", **kwargs)
+
     @cached_property
     def merger_index(self):
         """Find the progenitor indices and mass ratio of galaxies that have merged."""

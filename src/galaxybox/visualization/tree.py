@@ -55,12 +55,15 @@ class TemporalTreePlotter:
     """
 
     def __init__(self, min_scale: int = 0, max_mu: float = 10000, plot_style: str = "centered"):
-        self.min_scale = min_scale
-        self.max_mu = max_mu
-
+        if min_scale < 0:
+            return ValueError("Minimum scale factor must be greater than or equal to 0.")
+        if max_mu < 1:
+            return ValueError("Maximum mass ratio must be greater than or equal to 1.")
         if plot_style not in ["centered", "linear"]:
             return ValueError("Invalid plot style. Must be 'centered' or 'linear'.")
 
+        self.min_scale = min_scale
+        self.max_mu = max_mu
         self.plot_style = plot_style
 
         # TODO: allow for custom column names / aliasing

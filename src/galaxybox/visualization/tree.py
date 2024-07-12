@@ -109,8 +109,8 @@ class TemporalTreePlotter:
 
         Examples
         --------
-        >>> tree = Tree()
-        >>> tree(data)
+        >>> plot_tree = TemporalTreePlotter()
+        >>> plot_tree(data)
 
         """
         self._init_tree(tree)

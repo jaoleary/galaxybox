@@ -1,7 +1,7 @@
 """module contains the definition of the ProtoTree classes."""
 
 from abc import ABC, abstractmethod
-from typing import Sequence, Union
+from typing import Sequence
 
 import numpy as np
 import pandas as pd
@@ -185,7 +185,7 @@ class ProtoGalaxyTree(ProtoTree):
     def count(
         self,
         time_column: str,
-        target_time: Union[float, Sequence[float]] = None,
+        target_time: float | Sequence[float] = None,
         dtype=int,
         **kwargs,
     ) -> np.ndarray:
@@ -219,7 +219,7 @@ class ProtoGalaxyTree(ProtoTree):
     def hist(
         self,
         axis: str,
-        bins: Union[int, Sequence] = 10,
+        bins: int | Sequence[float | int] = 10,
         inverse: bool = False,
         log: bool = False,
         which_list: str = "list",
@@ -233,7 +233,7 @@ class ProtoGalaxyTree(ProtoTree):
             The axis along which to compute the histogram. This can be any column of the merger
             list.
 
-        bins : Union[int, Sequence], optional
+        bins : int | Sequence[float | int], optional
             If an int, it defines the number of equal-width bins in the range. If a sequence, it
             defines the bin edges, including the rightmost edge, allowing for non-uniform bin
             widths. Default is 10.

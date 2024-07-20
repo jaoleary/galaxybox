@@ -3,15 +3,15 @@
 import re
 from functools import cached_property, partial
 from importlib import resources
-from typing import Optional, Sequence, Union
+from typing import Sequence
 
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
-from galaxybox.data.trees.proto_tree import ProtoGalaxyTree
 from galaxybox.data.utils import find_keys_in_string, kwargs_to_filters
+from galaxybox.modules.trees.proto_tree import ProtoGalaxyTree
 from galaxybox.utils.logmath import logadd, logsum
 
 ALIAS_PATH = resources.files("galaxybox.configs") / "emerge-galaxy.alias.yaml"
@@ -260,12 +260,12 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         # TODO: correct desc mass and MR for non-binary mergers
         return mergers
 
-    def merger_list(self, columns: Optional[list[str]] = None, **kwargs) -> pd.DataFrame:
+    def merger_list(self, columns: list[str] | None = None, **kwargs) -> pd.DataFrame:
         """Return a list of mergers based on the provided keyword arguments.
 
         Parameters
         ----------
-        columns : list, optional
+        columns : list[str], optional
             A list of columns to return in the DataFrame. If None, all columns are returned.
         **kwargs : dict
             Keyword arguments specifying the criteria for the mergers to be returned.
@@ -328,7 +328,7 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         # TODO: create the option to load other properties beyond MR, tdf and ID.
         return mergers[columns] if columns is not None else mergers
 
-    def exsitu_mass(self, index: Union[int, Sequence[int]], **merger_kwargs) -> pd.DataFrame:
+    def exsitu_mass(self, index: int | Sequence[int], **merger_kwargs) -> pd.DataFrame:
         """Compute the ex-situ stellar mass for galaxies identified by the given index or indices.
 
         This method calculates the total mass of stars in a galaxy that were not formed in-situ but
@@ -337,7 +337,7 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
 
         Parameters
         ----------
-        index : Union[int, Sequence[int]]
+        index : int, Sequence[int]
             The identifier(s) of the galaxy or galaxies for which to calculate the ex-situ stellar
             mass. Can be a single ID as a string or a list/array of IDs.
         **merger_kwargs : dict

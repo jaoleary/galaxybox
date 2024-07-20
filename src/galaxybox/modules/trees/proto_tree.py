@@ -1,7 +1,7 @@
 """module contains the definition of the ProtoTree classes."""
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Sequence, Union
+from typing import Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -30,8 +30,14 @@ class ProtoTree(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def query(self, query, columns) -> List[pd.DataFrame]:
+    def query(self, query, columns) -> list[pd.DataFrame]:
         """Abstract method to query the tree with a given query and columns."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def columns(self) -> list[str]:
+        """Abstract property for a list containing the columns names of the tree."""
         raise NotImplementedError
 
 
@@ -50,7 +56,7 @@ class ProtoGalaxyTree(ProtoTree):
     """
 
     def __init__(
-        self, filepath: str, alias_path: Optional[str] = None, unittime_in_yr: float = 1.0e9
+        self, filepath: str, alias_path: str | None = None, unittime_in_yr: float = 1.0e9
     ) -> None:
         """Initialize the ProtoGalaxyTree."""
         self.filepath = filepath
@@ -60,6 +66,16 @@ class ProtoGalaxyTree(ProtoTree):
         if self.alias_path is not None:
             with open(self.alias_path, "r") as f:
                 self.col_alias = yaml.safe_load(f)
+
+    @abstractmethod
+    def _loader(*args, **kwargs) -> pd.DataFrame:
+        """Abstract method to load data.
+
+        This should define how data is loaded from a certain object or file type
+        (hd5, parquet, etc).
+
+        """
+        raise NotImplementedError
 
     def _df_query(
         self, query: list[tuple[str, str, str]], columns: list[str]
@@ -126,7 +142,7 @@ class ProtoGalaxyTree(ProtoTree):
         """
         return minmax_kwarg_swap_alias(kwargs, self.col_alias)
 
-    def list(self, columns=None, **kwargs) -> pd.DataFrame:
+    def list(self, columns: list[str] | None = None, **kwargs) -> pd.DataFrame:
         """Return list of galaxies with specified properties.
 
         This function selects galaxies based on a flexible set of arguments. Any column of the
@@ -137,7 +153,7 @@ class ProtoGalaxyTree(ProtoTree):
         Parameters
         ----------
         columns : list, optional
-            List of columns to include in the returned DataFrame, by default None
+            list of columns to include in the returned DataFrame, by default None
         kwargs : dict
             Keyword arguments to filter the galaxies based on column values
 

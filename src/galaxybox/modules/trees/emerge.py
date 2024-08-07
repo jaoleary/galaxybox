@@ -8,6 +8,7 @@ from typing import Sequence
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
+from astropy.cosmology import LambdaCDM
 from tqdm.auto import tqdm
 
 from galaxybox.data.utils import find_keys_in_string, kwargs_to_filters
@@ -44,6 +45,8 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         pre_load: bool = False,
         output_mstar_threshold: float = 7.0,
         fraction_escape_icm: float = 0.562183,
+        box_size: float = 135.54,
+        cosmology: dict = {"H0": 67.77, "Om0": 0.3070, "Ode0": 0.6930, "Ob0": 0.0485},
         **kwargs,
     ):
         self.time_column = "Scale"
@@ -52,6 +55,10 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         self.filepath = np.atleast_1d(self.filepath)
         self.output_mstar_threshold = output_mstar_threshold
         self.fraction_escape_icm = fraction_escape_icm
+        self.box_size = box_size
+
+        self.cosmology = cosmology
+        self.columns = []
 
         if self.tree_format not in ["parquet", "hdf5"]:
             raise ValueError(
@@ -96,6 +103,19 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
             .sort_values(self.time_column)
             .values.squeeze()
         )
+
+    @property
+    def cosmology(self):
+        return self._cosmology
+
+    @cosmology.setter
+    def cosmology(self, value):
+        if isinstance(value, dict):
+            self._cosmology = LambdaCDM(**value)
+        elif isinstance(value, LambdaCDM):
+            self._cosmology = value
+        else:
+            raise TypeError("cosmology must be a dictionary or a LambdaCDM object")
 
     @cached_property
     def scales(self):

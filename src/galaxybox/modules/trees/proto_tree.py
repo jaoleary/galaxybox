@@ -1,14 +1,15 @@
 """module contains the definition of the ProtoTree classes."""
 
 from abc import ABC, abstractmethod
-from typing import Sequence
+from typing import List, Sequence
 
 import numpy as np
 import pandas as pd
 import yaml
 from scipy.interpolate import interp1d
 
-from galaxybox.data.utils import key_alias, kwargs_to_filters, minmax_kwarg_swap_alias
+from galaxybox.data.utils import key_alias, kwarg_parser, kwargs_to_filters, minmax_kwarg_swap_alias
+from galaxybox.modules.mocks.lightcone import Lightcone
 
 
 class ProtoTree(ABC):
@@ -25,19 +26,31 @@ class ProtoTree(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def query(self, query, columns) -> List[pd.DataFrame]:
+        """Abstract method to query the tree with a given query and columns."""
+        raise NotImplementedError
+
+    @abstractmethod
     def list(self, columns=None, **kwargs) -> pd.DataFrame:
         """Abstract method to list galaxies with specified properties."""
         raise NotImplementedError
 
+    @property
     @abstractmethod
-    def query(self, query, columns) -> list[pd.DataFrame]:
-        """Abstract method to query the tree with a given query and columns."""
+    def columns(self) -> List[str]:
+        """Absract property for a list containing the columns names of the tree."""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def columns(self) -> list[str]:
-        """Abstract property for a list containing the columns names of the tree."""
+    def box_size(self) -> float:
+        """Abstract property for the size of the simulation box."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def cosmology(self) -> None:
+        """Abstract property for cosmology used for the simulation."""
         raise NotImplementedError
 
 
@@ -67,19 +80,42 @@ class ProtoGalaxyTree(ProtoTree):
             with open(self.alias_path, "r") as f:
                 self.col_alias = yaml.safe_load(f)
 
-    @abstractmethod
-    def _loader(*args, **kwargs) -> pd.DataFrame:
-        """Abstract method to load data.
+    @property
+    def box_size(self) -> float:
+        """Side length of the simulation volume.
 
-        This should define how data is loaded from a certain object or file type
-        (hd5, parquet, etc).
+        Assumes cubic volume where all sides are equal length.
+        """
+        return self._box_size
+
+    @box_size.setter
+    def box_size(self, value):
+        try:
+            self._box_size = float(value)
+        except ValueError:
+            raise TypeError("`box_size` must be a float or convertible to float")
+
+    @property
+    def columns(self) -> list[str]:
+        """Data columns available in the galaxy tree.
+
+        Returns
+        -------
+        list[str]
+            list of column names
 
         """
-        raise NotImplementedError
+        return self._columns
+
+    @columns.setter
+    def columns(self, value):
+        if not isinstance(value, list):
+            raise TypeError("`columns` must be a list of strings")
+        self._columns = value
 
     def _df_query(
-        self, query: list[tuple[str, str, str]], columns: list[str]
-    ) -> list[pd.DataFrame]:
+        self, query: List[tuple[str, str, str]], columns: List[str]
+    ) -> List[pd.DataFrame]:
         """Execute a query on a pandas dataframe.
 
         Parameters
@@ -99,8 +135,8 @@ class ProtoGalaxyTree(ProtoTree):
         return [self._loader(fp).query(query)[columns] for fp in self.filepath]
 
     def _parquet_query(
-        self, query: list[tuple[str, str, str]], columns: list[str]
-    ) -> list[pd.DataFrame]:
+        self, query: List[tuple[str, str, str]], columns: List[str]
+    ) -> List[pd.DataFrame]:
         """Query the Parquet data.
 
         Parameters
@@ -142,7 +178,7 @@ class ProtoGalaxyTree(ProtoTree):
         """
         return minmax_kwarg_swap_alias(kwargs, self.col_alias)
 
-    def list(self, columns: list[str] | None = None, **kwargs) -> pd.DataFrame:
+    def list(self, columns: List[str] | None = None, **kwargs) -> pd.DataFrame:
         """Return list of galaxies with specified properties.
 
         This function selects galaxies based on a flexible set of arguments. Any column of the

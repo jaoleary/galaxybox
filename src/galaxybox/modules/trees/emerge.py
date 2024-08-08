@@ -106,6 +106,7 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
 
     @property
     def cosmology(self):
+        """Astropy cosmology object."""
         return self._cosmology
 
     @cosmology.setter

@@ -8,7 +8,7 @@ from scipy.special import logsumexp
 
 def logsum(
     x: Sequence[Union[int, float]],
-    base: Union[int, float] = 10,
+    base: int | float = 10,
 ) -> np.ndarray:
     """Compute the logarithm of the sum of exponentials.
 

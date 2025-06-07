@@ -1,6 +1,5 @@
 """Various useful functions."""
 
-import inspect
 import os
 import subprocess
 
@@ -34,36 +33,6 @@ def cmd(args, path=None, encoding="utf-8", **kwargs):
             break
         print(line.decode(encoding))
     os.chdir(old_dir)
-
-
-def arg_parser(func, drop=False, **kwargs):
-    """From a dict of key word agruments, seperate those relevant to input function.
-
-    Parameters
-    ----------
-    func : function
-        The function for which kwargs should be extracted.
-    drop : bool
-        if True kwargs for func will be dropped from the orginal list (the default is False).
-    **kwargs : dict
-        keyword arguments.
-
-    Returns
-    -------
-    func_kwargs : dict
-        kwargs only associated with input function.
-    kwargs : dict
-        original or modifed dict of kwargs.
-
-    """
-    arg_names = inspect.getfullargspec(func)[0]
-    func_kwargs = {}
-    for i, k in enumerate(arg_names):
-        if k in kwargs:
-            func_kwargs[k] = kwargs[k]
-            if drop:
-                kwargs.pop(k)
-    return func_kwargs, kwargs
 
 
 def shuffle_string(s: str) -> str:

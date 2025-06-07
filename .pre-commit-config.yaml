@@ -8,13 +8,6 @@ repos:
       - id: check-added-large-files
       - id: mixed-line-ending
 
-  - repo: https://github.com/python-poetry/poetry
-    rev: 1.8.2
-    hooks:
-      - id: poetry-check
-      - id: poetry-lock
-
-
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
     rev: v0.11.2
@@ -24,3 +17,9 @@ repos:
         args: [ --fix ]
       # Run the formatter.
       - id: ruff-format
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    # uv version.
+    rev: 0.7.12
+    hooks:
+      - id: uv-lock

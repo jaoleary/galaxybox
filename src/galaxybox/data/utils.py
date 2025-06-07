@@ -1,5 +1,6 @@
 """Module containing general input/output functions."""
 
+import inspect
 import re
 from typing import Any
 
@@ -158,3 +159,33 @@ def minmax_kwarg_swap_alias(kwargs, alias_dict: dict[str, list[str]]):
         new_key = kw.replace(key, key_alias(key.lower(), alias_dict))
         kwargs[new_key] = kwargs.pop(kw)
     return kwargs
+
+
+def kwarg_parser(func, drop=False, **kwargs):
+    """From a dict of key word agruments, seperate those relevant to input function.
+
+    Parameters
+    ----------
+    func : function
+        The function for which kwargs should be extracted.
+    drop : bool
+        if True kwargs for func will be dropped from the orginal list (the default is False).
+    **kwargs : dict
+        keyword arguments.
+
+    Returns
+    -------
+    func_kwargs : dict
+        kwargs only associated with input function.
+    kwargs : dict
+        original or modifed dict of kwargs.
+
+    """
+    arg_names = inspect.getfullargspec(func)[0]
+    func_kwargs = {}
+    for i, k in enumerate(arg_names):
+        if k in kwargs:
+            func_kwargs[k] = kwargs[k]
+            if drop:
+                kwargs.pop(k)
+    return func_kwargs, kwargs

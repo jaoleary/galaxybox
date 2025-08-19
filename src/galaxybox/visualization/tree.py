@@ -282,4 +282,4 @@ class TemporalTreePlotter:
         self.cbar.ax.xaxis.set_label_position("top")
         self.cbar.ax.xaxis.set_ticks_position("top")
         self.cbar.ax.minorticks_on()
-        self.cbar.set_label("$\log_{10}(M_{\\mathrm{*}}/M_{\odot})$", fontsize=18)
+        self.cbar.set_label(r"$\log_{10}(M_{\mathrm{*}}/M_{\odot})$", fontsize=18)

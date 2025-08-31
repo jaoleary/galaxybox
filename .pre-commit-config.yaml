@@ -20,6 +20,16 @@ repos:
 
   - repo: https://github.com/astral-sh/uv-pre-commit
     # uv version.
-    rev: 0.7.12
+    rev: 0.8.12
     hooks:
       - id: uv-lock
+
+  # - repo: local
+  #   hooks:
+  #     - id: ty-check
+  #       name: ty-check
+  #       language: python
+  #       entry: ty check
+  #       pass_filenames: false
+  #       args: [--python=.venv/]
+  #       additional_dependencies: [ty]

@@ -1,7 +1,7 @@
 """module contains the definition of the ProtoTree classes."""
 
 from abc import ABC, abstractmethod
-from typing import List, Sequence
+from typing import List, Literal, Sequence
 
 import numpy as np
 import pandas as pd
@@ -93,10 +93,7 @@ class ProtoGalaxyTree(ProtoTree):
 
     @box_size.setter
     def box_size(self, value):
-        try:
-            self._box_size = float(value)
-        except ValueError:
-            raise TypeError("`box_size` must be a float or convertible to float")
+        self._box_size = float(value)
 
     @property
     def columns(self) -> list[str]:
@@ -323,7 +320,7 @@ class ProtoGalaxyTree(ProtoTree):
         randomize: bool = True,
         seed: int | None = None,
         fuzzy_bounds: bool = False,
-        method: str = "kw07",
+        method: Literal["kw07", "full_width", "hybrid"] = "kw07",
         **kwargs,
     ) -> pd.DataFrame:
         """Temp docstring."""
@@ -331,13 +328,14 @@ class ProtoGalaxyTree(ProtoTree):
             raise NotImplementedError("Only 'Scale' column is supported for now.")
 
         # Attempt to get the class method using the method name string
-        try:
-            lightcone_init = getattr(Lightcone, method)
-        except AttributeError:
-            raise NotImplementedError(f"The lightcone init method '{method}' is not implemented.")
+        lightcone_init = getattr(Lightcone, method)
 
         lc_kwargs, kwargs = kwarg_parser(lightcone_init, drop=True, **kwargs)
         lightcone = lightcone_init(lbox=self.box_size / self.cosmology.h, **lc_kwargs)
+
+        # TODO: implement better seeding
+        if seed is not None:
+            lightcone.set_seed(seed)
 
         # TODO: update to support other time columns (i.e. the output time for each sim snapshot)
         min_z, max_z = redshift_bounds
@@ -378,6 +376,7 @@ class ProtoGalaxyTree(ProtoTree):
             bc = lightcone.get_boxcoord(og)
 
             for j, snapshot_idx in enumerate(lightcone.get_snapshots(og)):
+                snapshot_cm_dist_min, snapshot_cm_dist_max = lightcone.snapshot_extent(snapshot_idx)
                 galaxies = self.list(
                     scale=self.scales[snapshot_idx],
                     columns=[
@@ -400,7 +399,14 @@ class ProtoGalaxyTree(ProtoTree):
 
                 galaxies = _transform_and_filter_galaxies(galaxies, lightcone, randomize, bc)
                 galaxies = _calculate_galaxy_properties(galaxies, lightcone, method)
-                galaxies = _include_fuzzy_bound_galaxies(galaxies, lightcone, randomize, bc)
+                galaxies = _include_fuzzy_bound_galaxies(
+                    galaxies,
+                    snapshot_cm_dist_min,
+                    snapshot_cm_dist_max,
+                    cm_dist_min,
+                    cm_dist_max,
+                    fuzzy_bounds,
+                )
 
                 # Add columns for lightcone coordinates and apparent redshift
                 galaxies[["RA", "Dec"]] = lightcone.ang_coords(

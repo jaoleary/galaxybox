@@ -224,10 +224,36 @@ class Lightcone:
         else:
             return pos[mask]
 
-    def snapshot_extent(self, snapnum):
-        """Return minimum and maximum radial extent of a snapshot from observer origin."""
+    def snapshot_extent(self, snapnum: int) -> tuple[float, float]:
+        """Return minimum and maximum radial extent of a snapshot from observer origin.
+
+        This method calculates the radial distance bounds for a given snapshot number
+        based on the predefined snapshot distances. The extent is determined by taking
+        the midpoint between adjacent snapshots, with special handling for the first
+        and last snapshots.
+
+        Parameters
+        ----------
+        snapnum : int
+            The snapshot number for which to calculate the radial extent. Must be a
+            valid index within the range of available snapshots.
+
+        Returns
+        -------
+        tuple[float, float]
+            A tuple containing (min_distance, max_distance) representing the minimum
+            and maximum radial extents of the specified snapshot in comoving units.
+
+        Notes
+        -----
+        For the first snapshot (snapnum=0), the minimum distance is set to 0 and
+        the maximum distance is half the distance to the next snapshot. For all
+        other snapshots, the bounds are calculated as the midpoint between the
+        current snapshot and its neighbors.
+
+        """
         if not hasattr(self, "distance"):
-            raise NameError("  'distance' not defined, set using `set_snap_distances`.")
+            raise AttributeError("'distance' not defined, set using `set_snap_distances`.")
 
         if snapnum == 0:
             min_d = 0

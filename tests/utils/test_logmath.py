@@ -13,8 +13,8 @@ from galaxybox.utils.logmath import logadd, logsum
         ([9, 10, 11], np.e, 11.40761),
         ([0, 0, 0], 10, 0.477121),  # log10(3)
         ([0, 0, 0], np.e, 1.098612),  # ln(3)
-        ([1, 2, 3], 10, 3.46497),
-        ([1, 2, 3], 2, 3.90689),
+        ([1, 2, 3], 10, 3.04532),
+        ([1, 2, 3], 2, 3.80735),
     ],
 )
 def test_logsum_with_different_bases(input, base, expected):

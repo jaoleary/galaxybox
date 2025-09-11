@@ -7,16 +7,16 @@ from scipy.special import logsumexp
 
 
 def logsum(
-    x: Sequence[Union[int, float]],
+    x: Sequence[int | float],
     base: int | float = 10,
 ) -> np.ndarray:
     """Compute the logarithm of the sum of exponentials.
 
     Parameters
     ----------
-    x : Sequence[Union[int, float]]
+    x : Sequence[int | float]
         The input sequence of numbers for which the log-sum-exp is computed.
-    base : Union[int, float], optional
+    base : int | float, optional
         The base for the logarithm calculation. Default is 10.
 
     Returns
@@ -26,6 +26,8 @@ def logsum(
 
     """
     x = np.asarray(x)
+    if x.size == 0:
+        raise ValueError("Input array cannot be empty")
     factor = np.log(base)
     return logsumexp(x * factor) / factor
 
@@ -54,6 +56,12 @@ def logadd(
     """
     a = np.asarray(a)
     b = np.asarray(b)
+
+    if a.size == 0 or b.size == 0:
+        raise ValueError("Input array cannot be empty")
+
+    if a.shape != b.shape:
+        raise ValueError("Input arrays must have the same shape")
 
     factor = np.log(base)
     return np.logaddexp(a * factor, b * factor) / factor

@@ -1,0 +1,30 @@
+# Galaxy Alias Configuration
+# This file maps various galaxy properties to their possible aliases.
+# Each key represents a galaxy property, and the value is a list of possible aliases for that property.
+# This allows the code to recognize different names for the same property in different data sources.
+# Keys that are capitalized correspond to direct EMERGE outputs. lower case keys have been added for
+# derived values and convenience.
+
+# TODO: allow for regex matching in the future
+ID:                 ["igal"]
+Scale:              ["a", "scale_factor"]
+redshift:           ["redshift", "z"]
+snapshot:           ["snapshot", "snapnum", "snap"]
+color:              ["color"]
+color_obs:          ["color_obs", "col_obs", "color_observed"]
+Stellar_mass:       ["mass", "mstar"]
+Halo_mass:          ["mvir"]
+Type:               ["gtype"]
+Up_ID:              ["ihost", "host_id", "id_host"]
+Desc_ID:            ["idesc", "id_desc", "desc_id", "descid"]
+Main_ID:            ["imain", "id_main"]
+MMP_ID:             ["immp", "id_mmp"]
+Coprog_ID:          ["icoprog", "id_coprog"]
+Leaf_ID:            ["ileaf", "id_leaf"]
+Original_ID:        ["ogid","rockstar_id","id_rockstar","id_original","rs_id","id_rs","irs","rsid"]
+Num_prog:           ["np"]
+Intra_cluster_mass: ["icm"]
+Stellar_mass_root:  ["mstar_root","root_mstar","rootmass","root_mass"]
+Stellar_mass_obs:   ["mstar_obs"]
+Halo_radius:        ["rvir", "virial_radius", "radius"]
+stellar_mass_ratio: ["massratio", "mass_ratio", "mu", "ratio", "mr"]

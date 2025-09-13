@@ -849,7 +849,7 @@ def plot_efficiency(
         The axes on which the data is plotted.
 
     """
-    if peak_mass & (mass_def == "Halo"):
+    if peak_mass and (mass_def == "Halo"):
         mt = "_peak"
     else:
         mt = ""

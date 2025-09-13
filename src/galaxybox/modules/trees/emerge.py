@@ -227,7 +227,7 @@ class EmergeGalaxyTrees(ProtoGalaxyTree):
         else:
             raise NotImplementedError("recursive loading not yet available.")
 
-    def count(**kwargs) -> np.ndarray:
+    def count(self, **kwargs) -> np.ndarray:
         """Count galaxies of some type, at some scale factor."""
         return super().count("Scale", **kwargs)
 

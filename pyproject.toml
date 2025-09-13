@@ -59,15 +59,13 @@ build-backend = "hatchling.build"
 
 
 [tool.commitizen]
-    bump_map                 = { "release" = "MAJOR", "break" = "MAJOR", "feat" = "MINOR", "fix" = "PATCH", "refactor" = "PATCH", "docs" = "PATCH" }
-    bump_message             = 'bump: $current_version \u2192 $new_version'
-    bump_pattern             = "^.*?(release|break|feat|fix|refactor|docs):?"
-    changelog_pattern        = "^(release|break|feat|fix|refactor|docs)?(!)?"
-    commit_parser            = "^.*?(?P<change_type>release|break|feat|fix|refactor|docs):\\s(?P<message>.*)?"
-    name                     = "cz_customize"
+    bump_message             = 'bump: $current_version → $new_version'
+    major_version_zero       = false
+    name                     = "cz_conventional_commits"
     update_changelog_on_bump = true
     version_files            = ["pyproject.toml:^version"]
     version_provider         = "uv"
+    tag_format               = "v$version"
 
 [tool.coverage.run]
     branch = true

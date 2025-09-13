@@ -27,6 +27,7 @@ jobs:
             docs
             refactor
             chore
+            break
           requireScope: false
           disallowScopes: |
             release

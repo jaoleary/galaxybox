@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'  # Triggers on tags starting with 'v' (e.g., v1.0.0, v2.1.3)
+  workflow_dispatch:  # Allows manual triggering
+    inputs:
+      tag:
+        description: 'Tag to build and publish (e.g., v1.0.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -16,6 +22,8 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -48,14 +56,22 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - name: Extract version from tag
         id: version
-        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.tag }}" | sed 's/^v//' >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           name: Release ${{ steps.version.outputs.version }}
           body: |
             Changes in this Release
